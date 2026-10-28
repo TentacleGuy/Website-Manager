@@ -1,0 +1,21 @@
+services:
+  manager:
+    build: .
+    image: vmm-manager:dev
+    ports:
+      - "${VMM_BIND:-127.0.0.1}:8090:8090"
+    environment:
+      VMM_LISTEN: 0.0.0.0
+      VMM_DATA: /data
+      VMM_HOST_DATA: ${VMM_HOST_DATA:?Set absolute VMM_HOST_DATA in .env}
+    volumes:
+      - ./data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - gateway
+    restart: unless-stopped
+
+networks:
+  gateway:
+    external: true
+    name: vmm-gateway

@@ -1,0 +1,21 @@
+data/
+.env
+__pycache__/
+*.pyc
+
+.venv/
+dist/
+
+infra/dynamic/tls.json
+infra/dynamic/tls.yaml
+.DS_Store
+exports/
+*.png
+!app/static/assets/*.png
+*.log
+
+# Generated per-installation DNS and gateway settings
+infra/Corefile
+infra/compose.gateway.yaml
+infra/dynamic/warmup.yaml
+infra/dynamic/protocols.yaml

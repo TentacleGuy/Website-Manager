@@ -1,0 +1,15 @@
+.git
+.venv
+data
+__pycache__
+*.png
+!app/static/assets/*.png
+.env
+dist
+installer
+tests
+logs
+
+exports
+.gitignore
+.github
