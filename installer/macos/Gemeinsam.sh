@@ -1,7 +1,7 @@
 #!/bin/bash
 # macOS ships Bash 3.2. No Homebrew or developer tools are required.
 
-INSTALL_DIR="$HOME/Library/Application Support/Tentacle/WebsiteManager"
+INSTALL_DIR="${VMM_INSTALL_DIR:-$HOME/Library/Application Support/Tentacle/WebsiteManager}"
 DOCKER_APP=''
 DOCKER=''
 
@@ -36,18 +36,20 @@ version_at_least() {
 
 find_docker() {
     local candidate
+    DOCKER=$(command -v docker || true)
     for candidate in /Applications/Docker.app "$HOME/Applications/Docker.app"; do
         if [ -x "$candidate/Contents/Resources/bin/docker" ]; then
             DOCKER_APP=$candidate
-            DOCKER="$candidate/Contents/Resources/bin/docker"
+            [ -n "$DOCKER" ] || DOCKER="$candidate/Contents/Resources/bin/docker"
             return 0
         fi
     done
-    return 1
+    [ -n "$DOCKER" ]
 }
 
 check_docker_macos() {
     local required
+    [ -n "$DOCKER_APP" ] || return 0
     required=$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$DOCKER_APP/Contents/Info.plist" 2>/dev/null || true)
     if [ -n "$required" ] && ! version_at_least "$(/usr/bin/sw_vers -productVersion)" "$required"; then
         fail "Docker benoetigt mindestens macOS $required. Bitte macOS zuerst aktualisieren."
@@ -56,11 +58,10 @@ check_docker_macos() {
 
 wait_docker() {
     find_docker || { fail 'Docker Desktop fehlt. Bitte Installieren.command starten.'; return 1; }
-    check_docker_macos || return 1
     export PATH="${DOCKER_APP}/Contents/Resources/bin:$PATH"
-    export DOCKER_CONTEXT=desktop-linux
-    unset DOCKER_HOST DOCKER_TLS_VERIFY DOCKER_CERT_PATH
     if [ "$("$DOCKER" info --format '{{.OSType}}' 2>/dev/null || true)" != linux ]; then
+        [ -n "$DOCKER_APP" ] || { fail "Der gewaehlte lokale Docker-Dienst ist nicht gestartet. Bitte zuerst starten."; return 1; }
+        check_docker_macos || return 1
         /usr/bin/open -a "$DOCKER_APP"
         printf '%s\n' 'Docker Desktop startet. Bitte dort die Bedingungen bestaetigen und die Einrichtung abschliessen.'
         local attempt
@@ -79,6 +80,11 @@ wait_docker() {
 
 start_manager() {
     cd "$INSTALL_DIR"
+    source "$INSTALL_DIR/app/installer_assets/docker-environment.sh"
+    manager_environment "$INSTALL_DIR"
+    local actual
+    actual=$("$DOCKER" image inspect vmm-manager:dev --format '{{index .Config.Labels "vmm.docker.cli.image"}}' 2>/dev/null || true)
+    if [ "$actual" != "$DOCKER_CLI_IMAGE" ]; then "$DOCKER" compose -p tentacle-manager build manager;fi
     if ! "$DOCKER" network inspect vmm-gateway >/dev/null 2>&1; then
         "$DOCKER" network create vmm-gateway
     fi

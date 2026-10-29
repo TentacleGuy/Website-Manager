@@ -86,7 +86,7 @@ class UpdateTests(unittest.TestCase):
     def test_check_reports_new_stable_release(self):
         tag='v1.1.0';base='https://github.com/'+updates.REPOSITORY+'/releases/download/'+tag+'/'
         release={'tag_name':tag,'assets':[{'name':name,'browser_download_url':base+name} for name in ('manager-update.zip','manager-update.zip.sha256')]}
-        with tempfile.TemporaryDirectory() as tmp,patch.object(updates,'DATA',Path(tmp)),patch.object(updates,'STATE',Path(tmp)/'updates/status.json'),patch.object(updates,'fetch',return_value=json.dumps(release).encode()):
+        with tempfile.TemporaryDirectory() as tmp,patch.object(updates,'RELEASE',{'version':'1.0.0'}),patch.object(updates,'DATA',Path(tmp)),patch.object(updates,'STATE',Path(tmp)/'updates/status.json'),patch.object(updates,'fetch',return_value=json.dumps(release).encode()):
             self.assertTrue(updates.check()['available']);self.assertEqual(updates.status()['latest'],'1.1.0')
             with patch.object(updates,'fetch',side_effect=OSError('offline')):
                 result=updates.check();self.assertIn('offline',result['error']);self.assertNotIn('assets',result)
@@ -113,7 +113,7 @@ class WorkerTests(unittest.TestCase):
             def run(args,**kwargs):
                 if 'build' in args and (root/'app/server.py').read_text()=='new version':return subprocess.CompletedProcess(args,1,b'failed build')
                 return subprocess.CompletedProcess(args,0,b'')
-            with patch.dict(os.environ,{'VMM_UPDATE_PROJECT':'test-manager','VMM_UPDATE_HOST_DATA':'/host/manager/data'}),patch.object(update_worker.subprocess,'run',side_effect=run):
+            with patch.dict(os.environ,{'VMM_UPDATE_PROJECT':'test-manager','VMM_UPDATE_HOST_DATA':'/host/manager/data'}),patch.object(update_worker.subprocess,'run',side_effect=run),patch.object(update_worker.subprocess,'check_output',return_value='29.1.0'):
                 with self.assertRaises(RuntimeError):update_worker.apply(root,'test')
             self.assertEqual((root/'app/server.py').read_text(),'previous')
             self.assertEqual((root/'.env').read_text(),'private settings');self.assertEqual((root/'data/project.txt').read_text(),'site data')

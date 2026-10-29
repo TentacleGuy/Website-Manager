@@ -23,6 +23,7 @@ def build(root=ROOT, output=None):
     output.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(output, 'w') as archive:
         for path in source_files(root):
+            if any(part in ('windows','linux') for part in path.relative_to(root).parts):continue
             if path.is_symlink():
                 raise ValueError('Symlinks duerfen nicht ins Installationspaket: ' + str(path))
             add(archive, path, NAME + '/payload/' + path.relative_to(root).as_posix())

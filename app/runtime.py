@@ -84,7 +84,7 @@ def project_links(project, root):
         return {key:None for key in ('frontend_url','backend_url','database_url','http_url','https_url','admin_url')}
     path='/installation/' if project['restore'] else '/'
     return {'frontend_url':base+'/','backend_url':base+('/administrator/' if project['cms']=='joomla' else '/wp-admin/'),
-            'database_url':('http://localhost:8091/index.php?route=/database/structure&db=vmm_'+project['slug'].replace('-','_') if project['storage']=='shared' else 'http://localhost:8091/'+project['slug']+'/'),'http_url':base+path,'https_url':None if preview else 'https://'+project['slug']+'.vmm.test:'+str(https)+path,
+            'database_url':('http://localhost:8091/index.php?route=/database/structure&server='+str(__import__('database_profiles').profile(project)['server'])+'&db=vmm_'+project['slug'].replace('-','_') if project['storage']=='shared' else 'http://localhost:8091/'+project['slug']+'/'),'http_url':base+path,'https_url':None if preview else 'https://'+project['slug']+'.vmm.test:'+str(https)+path,
             'admin_url':base+('/installation/' if project['restore'] else '/administrator/' if project['cms']=='joomla' else '/wp-admin/'), 'local_preview':bool(preview)}
 
 

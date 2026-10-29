@@ -20,7 +20,7 @@ def apply(root,ident):
                 with sqlite3.connect(root/'data/manager.sqlite',timeout=30) as connection:
                     connection.execute("UPDATE jobs SET status=?,message=?,finished=? WHERE id=(SELECT id FROM jobs WHERE resource='manager-update' AND kind='manager-install' ORDER BY created DESC LIMIT 1)",(state,message,int(time.time())))
             except sqlite3.Error:pass
-    project=os.environ['VMM_UPDATE_PROJECT'];host_data=os.environ['VMM_UPDATE_HOST_DATA']
+    project=os.environ['VMM_UPDATE_PROJECT'];host_data=os.environ['VMM_UPDATE_HOST_DATA'];docker_socket=os.environ.get('VMM_UPDATE_SOCKET','/var/run/docker.sock')
     env={**os.environ,'VMM_HOST_DATA':host_data,'COMPOSE_PROJECT_NAME':project}
     def command(args):
         result=subprocess.run(args,cwd=root,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,timeout=1800)
@@ -28,7 +28,7 @@ def apply(root,ident):
         if result.returncode:raise RuntimeError('Updateschritt fehlgeschlagen. Details: data/updates/'+ident+'/update.log')
     compose=['docker','compose','-p',project,'-f',str(root/'compose.yaml')]
     override=stage/'compose.update.json'
-    override.write_text(json.dumps({'services':{'manager':{'volumes':[host_data+':/data','/var/run/docker.sock:/var/run/docker.sock']}}}))
+    override.write_text(json.dumps({'services':{'manager':{'volumes':[host_data+':/data',docker_socket+':/var/run/docker.sock']}}}))
     compose+=['-f',str(override)]
     changed=[];stopped=False
     report('running','Manager wird aktualisiert. Projekte bleiben erhalten.')
@@ -48,7 +48,18 @@ def apply(root,ident):
                 if path.exists():old.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(path,old)
                 changed.append(item.filename);path.parent.mkdir(parents=True,exist_ok=True)
                 temp=path.with_suffix(path.suffix+'.update');temp.write_bytes(archive.read(item));temp.replace(path)
-        command(compose+['build','manager'])
+        if (root/'.tentacle-installer').exists():
+            system='windows' if (root/'Gemeinsam.ps1').exists() else 'macos' if (root/'Gemeinsam.sh').exists() else 'linux'
+            for file in (root/'app/installer_assets'/system).glob('*'):
+                if not file.is_file() or file.suffix not in ('.ps1','.cmd','.sh','.command','.txt'):continue
+                target=root/file.name;old=backup/file.name
+                if target.exists():shutil.copy2(target,old)
+                changed.append(file.name);shutil.copy2(file,target)
+                if file.suffix in ('.sh','.command'):target.chmod(0o755)
+        server=subprocess.check_output(['docker','version','--format','{{.Server.Version}}'],text=True).strip()
+        major=server.split('.')[0]
+        if not major.isdigit() or int(major)<24:raise ValueError('Nicht unterstützte Docker-Version: '+server)
+        command(compose+['build','--build-arg','DOCKER_CLI_IMAGE=docker:'+major+'-cli','manager'])
         command(compose+['up','-d','--no-deps','manager'])
         import importlib.util
         spec=importlib.util.spec_from_file_location('vmm_setup',root/'scripts/setup.py');module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module);module.protocol_routes(root)

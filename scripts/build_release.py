@@ -6,6 +6,7 @@ from pathlib import Path
 import zipfile
 from build_windows_installer import ROOT,source_files,build as windows
 from build_macos_installer import build as macos
+from build_linux_installer import build as linux
 
 
 def build(root=ROOT):
@@ -16,7 +17,7 @@ def build(root=ROOT):
             if path.is_symlink():raise ValueError('Symlink darf nicht veröffentlicht werden: '+str(path))
             archive.write(path,path.relative_to(root).as_posix())
     update.with_suffix('.zip.sha256').write_text(hashlib.sha256(update.read_bytes()).hexdigest()+'  '+update.name+'\n')
-    windows(root);macos(root)
+    windows(root);macos(root);linux(root)
     return update
 
 

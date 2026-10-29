@@ -15,9 +15,10 @@ RUN set -eux; for file in /etc/apt/sources.list /etc/apt/sources.list.d/*.list /
       done; \
       printf 'deb [check-valid-until=no] https://archive.debian.org/debian-security bullseye-security main\n' > /etc/apt/sources.list.d/vmm-security.list; \
     fi
-RUN apt-get update && apt-get install -y --no-install-recommends libicu-dev libzip-dev libpng-dev libjpeg62-turbo-dev libfreetype6-dev libonig-dev unzip curl ca-certificates default-mysql-client \
+RUN apt-get update && apt-get install -y --no-install-recommends libicu-dev libzip-dev libpng-dev libjpeg62-turbo-dev libfreetype6-dev libonig-dev libxml2-dev libgmp-dev libxslt1-dev unzip curl ca-certificates default-mysql-client \
  && docker-php-ext-configure gd --with-freetype --with-jpeg \
- && docker-php-ext-install -j2 mysqli pdo_mysql intl zip gd mbstring exif \
+ && docker-php-ext-install -j2 mysqli pdo_mysql intl zip gd mbstring exif bcmath soap sockets gmp xsl \
+ && if ! php -m | grep -qi opcache; then docker-php-ext-install opcache; fi \
  && a2enmod rewrite headers \
  && rm -rf /var/lib/apt/lists/*
 RUN curl --fail --location --retry 2 https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -o /usr/local/bin/wp && chmod +x /usr/local/bin/wp

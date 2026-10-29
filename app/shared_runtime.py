@@ -4,17 +4,20 @@ import re
 import secrets
 from pathlib import Path
 from runtime import PHP, host_path, slug
+from database_profiles import profile,service as database_service,LEGACY,freeze_existing
 
 
 def database_info(p):
     name='vmm_'+slug(p['slug']).replace('-','_')
-    return {'host':'db','database':name,'user':name,'password':p['db_password']}
+    return {'host':profile(p)['service'],'database':name,'user':name,'password':p['db_password']}
 
 
-def stack(host_data, root_password):
+def stack(host_data, root_password, database_profiles=None):
     host=host_path(host_data)
-    services={'db':{'image':'mariadb:10.11','environment':{'MARIADB_ROOT_PASSWORD':root_password},
-        'volumes':['database:/var/lib/mysql'],'healthcheck':{'test':['CMD','healthcheck.sh','--connect','--innodb_initialized'],'interval':'3s','timeout':'5s','retries':60},'restart':'unless-stopped'}}
+    profiles=list(dict.fromkeys([LEGACY]+list(database_profiles or [])))
+    services={};volumes={}
+    for ident in profiles:
+        item=profile({'database_profile':ident});services[item['service']]=database_service(item,root_password);volumes[item['volume']]={}
     for php in PHP:
         suffix=php.replace('.','');ident='vmm-shared-'+suffix
         labels={'traefik.enable':'true','traefik.docker.network':'vmm-gateway'}
@@ -25,7 +28,7 @@ def stack(host_data, root_password):
             if tls:labels[base+'.tls']='true'
         labels['traefik.http.services.'+ident+'.loadbalancer.server.port']='80'
         services['php'+suffix]={'image':'vmm-php:'+php,'profiles':['php'+suffix],
-            'depends_on':{'db':{'condition':'service_healthy'}},'volumes':[
+            'volumes':[
                 host+'/projects:/vmm-projects',host+'/shared/apache:/etc/apache2/sites-enabled:ro',
                 host+'/shared/state:/vmm-state:ro',host+'/shared/tools:/vmm-tools:ro',
                 host+'/extensions:/vmm-extensions:ro'],
@@ -35,12 +38,11 @@ def stack(host_data, root_password):
         'traefik.http.routers.vmm-shared-database.entrypoints':'database',
         'traefik.http.routers.vmm-shared-database.priority':'50',
         'traefik.http.services.vmm-shared-database.loadbalancer.server.port':'80'}
-    services['phpmyadmin']={'image':'phpmyadmin:5.2-apache','depends_on':{'db':{'condition':'service_healthy'}},
-        'environment':{'UPLOAD_LIMIT':'512M'},'volumes':[host+'/shared/pma:/vmm-pma:ro'],
+    services['phpmyadmin']={'image':'phpmyadmin:5.2-apache','environment':{'UPLOAD_LIMIT':'512M'},'volumes':[host+'/shared/pma:/vmm-pma:ro'],
         'entrypoint':['/bin/sh','-c','ln -sf /vmm-pma/config.php /etc/phpmyadmin/config.user.inc.php; exec /docker-entrypoint.sh "$@"','vmm'],
         'command':['apache2-foreground'],
         'networks':['default','gateway'],'labels':labels,'restart':'unless-stopped'}
-    return {'name':'vmm-runtime','services':services,'volumes':{'database':{}},'networks':{'gateway':{'external':True,'name':'vmm-gateway'}}}
+    return {'name':'vmm-runtime','services':services,'volumes':volumes,'networks':{'gateway':{'external':True,'name':'vmm-gateway'}}}
 
 
 def atomic(path,text):
@@ -49,11 +51,16 @@ def atomic(path,text):
 
 def write_config(data, host, projects):
     root=data/'shared';root.mkdir(exist_ok=True)
+    freeze_existing(data)
     for name in ('apache','state','tools','pma'): (root/name).mkdir(exist_ok=True)
     secret=root/'secrets.json'
     if not secret.exists():atomic(secret,json.dumps({'root_password':secrets.token_urlsafe(36)}))
     password=json.loads(secret.read_text())['root_password']
-    atomic(root/'compose.json',json.dumps(stack(host,password),indent=2))
+    config=stack(host,password,[profile(p)['id'] for p in projects if p['storage']=='shared'])
+    from database_profiles import legacy_spec
+    old={**legacy_spec(data),'id':LEGACY,'volume':'database'}
+    config['services']['db']=database_service(old,password)
+    atomic(root/'compose.json',json.dumps(config,indent=2))
     # Default vhost rejects unknown domains; no directory listing or tools are web-accessible.
     configs={'000-default.conf':'''<VirtualHost *:80>
 ServerName vmm-invalid
@@ -103,7 +110,11 @@ if (PHP_SAPI !== 'cli') {
     # One local administrator session sees every project database on the shared server.
     encoded=json.dumps(password).replace('$','\\$')
     config="<?php\n$cfg['Servers']=[];$i=1;\n"
-    config+="$cfg['Servers'][$i]=['auth_type'=>'config','host'=>'db','user'=>'root','password'=>"+encoded+",'verbose'=>'Tentacle Projects','AllowNoPassword'=>false];\n"
-    config+="$cfg['ServerDefault']=1;$cfg['PmaAbsoluteUri']='http://localhost:8091/';$cfg['AllowArbitraryServer']=false;\n"
+    for ident in dict.fromkeys([LEGACY]+[profile(p)['id'] for p in projects if p['storage']=='shared']):
+        item=profile({'database_profile':ident})
+        config+="$i="+str(item['server'])+";$cfg['Servers'][$i]=['auth_type'=>'config','host'=>'"+item['service']+"','user'=>'root','password'=>"+encoded+",'verbose'=>'"+item['engine']+' '+item['version']+"','AllowNoPassword'=>false];$i++;\n"
+    active=[profile(p)['server'] for p in projects if p['storage']=='shared']
+    default=1 if 1 in active else active[0] if active else 0
+    config+="$cfg['ServerDefault']="+str(default)+";$cfg['PmaAbsoluteUri']='http://localhost:8091/';$cfg['AllowArbitraryServer']=false;\n"
     atomic(root/'pma/config.php',config);(root/'pma/config.php').chmod(0o644)
     return root/'compose.json'

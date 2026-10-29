@@ -153,6 +153,12 @@ def save_source(body):
         except ValueError:raise ValueError('CMS-Konfiguration muss ein JSON-Objekt sein.')
     if not isinstance(mapping,dict):raise ValueError('CMS-Konfiguration muss ein Objekt sein.')
     config['cms_config']=mapping
+    from compatibility import clean
+    declared=body.get('requirements',{})
+    if declared:config['requirements']=clean(declared,config['name'])
+    elif body.get('id') and 'requirements' not in body:
+        previous=source(ident)
+        if previous.get('requirements'):config['requirements']=previous['requirements']
     if config['license']:
         cred=license_value(config['license'],config['provider'],source_id=ident)
         if cred.get('project'):raise ValueError('Als globalen Standard nur eine projektunabhängige Lizenz wählen. Seitenschlüssel bei der Projektinstallation auswählen.')

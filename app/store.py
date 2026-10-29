@@ -24,7 +24,7 @@ def init():
         c.execute('PRAGMA journal_mode=WAL')
         c.execute('CREATE TABLE IF NOT EXISTS projects (slug TEXT PRIMARY KEY, cms TEXT, php TEXT, status TEXT, created INTEGER, db_password TEXT, db_root_password TEXT, error TEXT)')
         columns = {r['name'] for r in c.execute('PRAGMA table_info(projects)')}
-        for key, definition in {'version': "TEXT DEFAULT ''", 'package_id': 'TEXT', 'storage': "TEXT DEFAULT 'legacy'", 'restore': 'INTEGER DEFAULT 0', 'backup_group': 'TEXT', 'backup_archive': 'TEXT', 'kickstart': "TEXT DEFAULT 'auto'", 'restore_phase': "TEXT DEFAULT ''"}.items():
+        for key, definition in {'version': "TEXT DEFAULT ''", 'package_id': 'TEXT', 'storage': "TEXT DEFAULT 'legacy'", 'restore': 'INTEGER DEFAULT 0', 'backup_group': 'TEXT', 'backup_archive': 'TEXT', 'kickstart': "TEXT DEFAULT 'auto'", 'restore_phase': "TEXT DEFAULT ''", 'database_profile': "TEXT DEFAULT 'existing'", 'php_mode': "TEXT DEFAULT 'manual'"}.items():
             if key not in columns: c.execute('ALTER TABLE projects ADD COLUMN ' + key + ' ' + definition)
         c.execute('CREATE TABLE IF NOT EXISTS packages (id TEXT PRIMARY KEY, cms TEXT, version TEXT, filename TEXT, sha256 TEXT, size INTEGER, source TEXT, created INTEGER)')
         c.execute('CREATE TABLE IF NOT EXISTS releases (cms TEXT, version TEXT, url TEXT, PRIMARY KEY(cms,version))')

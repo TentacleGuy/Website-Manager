@@ -29,7 +29,9 @@ def public(row):
     return {k:v for k,v in dict(row).items() if k not in ('db_password','db_root_password','secret','filename')}
 
 def create_project(body):
-    name=slug(body.get('slug'));restore=bool(body.get('backup_id'));cms='auto' if restore else valid_cms(body.get('cms'));php=body.get('php','8.4');ports(php)
+    name=slug(body.get('slug'));restore=bool(body.get('backup_id'));cms='auto' if restore else valid_cms(body.get('cms'));php_mode=body.get('php','auto');php='8.4' if php_mode=='auto' else php_mode;ports(php)
+    from database_profiles import validate
+    database_profile=validate(body.get('database_profile','auto'))
     if any((DATA/'trash').glob(name+'-*/metadata.json')):raise ValueError('Dieser Projektname liegt im lokalen Papierkorb. Zur Wiederherstellung reserviert; bitte einen anderen Namen verwenden.')
     plans=[] if restore else extensions.validate_plans(cms,body.get('extensions',[]),name)
     restore=bool(body.get('backup_id'))
@@ -52,6 +54,7 @@ def create_project(body):
             v=package['version']
         c.execute('INSERT INTO projects (slug,cms,php,status,created,db_password,db_root_password,error,version,package_id,storage,restore) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
             (name,cms,php,'stopped',int(time.time()),secrets.token_urlsafe(24),secrets.token_urlsafe(24),None,v,package_id,'shared',int(restore)))
+    with db() as c:c.execute('UPDATE projects SET database_profile=?,php_mode=? WHERE slug=?',(database_profile,'auto' if php_mode=='auto' else 'manual',name))
     if restore:
         with db() as c:c.execute("UPDATE projects SET status='preparing',backup_group=?,backup_archive=?,kickstart=? WHERE slug=?",(group,archive,choice,name))
     extensions.assign(name,plans)
@@ -114,6 +117,13 @@ class Handler(BaseHTTPRequestHandler):
         if not self.trusted_host(): return self.send(403,{'error':'Host nicht freigegeben.'})
         path=urlparse(self.path).path
         try:
+            if path=='/api/database-profiles':
+                from database_profiles import listing
+                return self.send(200,{'profiles':listing()})
+            if path=='/api/environment':
+                import environment_service
+                from database_profiles import profile,listing
+                return self.send(200,{**environment_service.saved_report(DATA),'existing_database':profile({'database_profile':'existing'}),'database_profiles':listing()})
             if path=='/api/projects': return self.send(200,{'projects':[{**public(p),**project_links(dict(p),DATA/'projects'/p['slug']),'extension_status':extensions.inventory_summary(p['slug'])} for p in records('projects')],'php':PHP})
             if re.fullmatch(r'/api/projects/[a-z][a-z0-9-]{0,39}/credentials',path):
                 return self.send(200,{'credentials':credential_list(slug(path.split('/')[3]))})
@@ -240,6 +250,9 @@ class Handler(BaseHTTPRequestHandler):
                 version=path.split('/')[-1];ports(version);action=body.get('action')
                 if action not in ('start','stop'):raise ValueError('Ungültige Laufzeitaktion.')
                 return self.send(202,{'job':job('shared-runtime','runtime',lambda:runtime_transition(version,action))})
+            if path=='/api/environment/check':
+                import environment_service
+                return self.send(202,{'job':job('environment','environment-check',lambda:environment_service.check(DATA))})
             if path=='/api/kickstart/sync':
                 import kickstart_service
                 return self.send(202,{'job':job('kickstart','catalog',lambda:str(len(kickstart_service.catalog(True)))+' Kickstart-Versionen verfügbar.')})

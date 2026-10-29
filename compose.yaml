@@ -1,6 +1,9 @@
 services:
   manager:
-    build: .
+    build:
+      context: .
+      args:
+        DOCKER_CLI_IMAGE: ${VMM_DOCKER_CLI_IMAGE:-docker:28-cli}
     image: vmm-manager:dev
     ports:
       - "${VMM_BIND:-127.0.0.1}:8090:8090"
@@ -10,7 +13,7 @@ services:
       VMM_HOST_DATA: ${VMM_HOST_DATA:?Set absolute VMM_HOST_DATA in .env}
     volumes:
       - ./data:/data
-      - /var/run/docker.sock:/var/run/docker.sock
+      - ${VMM_DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
     networks:
       - gateway
     restart: unless-stopped

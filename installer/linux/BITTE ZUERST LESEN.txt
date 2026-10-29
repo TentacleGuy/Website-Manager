@@ -1,0 +1,23 @@
+Tentacle Website Manager - Linux
+
+Voraussetzungen: lokaler Docker Engine ab 24 und Compose-Plugin ab 2.20,
+Linux-Container auf AMD64 oder ARM64, Bash und Docker-Zugriff als Benutzer.
+Eine entfernte Docker-Verbindung ist fuer lokale Projektdateien nicht geeignet.
+
+ZIP vollstaendig entpacken und bash Installieren.sh ausfuehren.
+Die Installation liegt standardmaessig unter ~/.local/share/Tentacle/WebsiteManager.
+VMM_INSTALL_DIR kann einen eigenen Installationsordner vorgeben.
+
+Vorhandenes Docker wird verwendet. Es werden keine Host-Datenbanken ersetzt.
+Datenbanken entstehen erst beim Anlegen eines Projekts, mit eigenem Versionsprofil.
+Die Installationspruefung steht unter data/setup-report.json.
+
+Dashboard: http://localhost:8090/
+Fuer vmm.test und HTTPS: im Installationsordner sudo bash Systemeinrichtung.sh.
+Der Helfer unterstuetzt systemd-resolved und die gaengigen Debian-/Fedora-
+Zertifikatsspeicher. Andere Resolver werden nicht ueberschrieben; dort muessen
+vmm.test an 127.0.0.1:1053 und das oeffentliche rootCA.pem manuell eingerichtet werden.
+Browser mit eigenem Zertifikatsspeicher benoetigen ggf. einen separaten Zertifikatsimport.
+
+Spaeter: bash Starten.sh oder Manager-Updates in der Oberflaeche.
+Projekte und Datenbankvolumes werden beim Programmupdate nicht geloescht.

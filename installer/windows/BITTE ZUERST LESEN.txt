@@ -1,99 +1,29 @@
-TENTACLE PROJEKTMANAGER - EINRICHTUNG AUF EINEM NEUEN WINDOWS-PC
+Tentacle Website Manager - Windows
 
-1. Die komplette ZIP-Datei mit Rechtsklick > Alle extrahieren entpacken.
-2. Im entpackten Ordner auf Installieren.cmd doppelklicken.
-3. Die Windows-Abfragen zur Systemeinrichtung bestaetigen. Dafuer werden
-   Administratorrechte benoetigt; bei Firmen-PCs kann die IT helfen.
-4. Wenn ein Neustart verlangt wird: Arbeit speichern, Windows neu starten
-   und auf dem Desktop "Tentacle Einrichtung fortsetzen" doppelklicken.
-5. Im Docker-Fenster die Nutzungsbedingungen lesen und bestaetigen.
-   Eine eventuell angebotene Anmeldung kann bei normaler privater/kleiner
-   Firmeninstallation uebersprungen werden, sofern keine Firmenrichtlinie greift.
-6. Warten, bis sich der Projektmanager im Browser oeffnet.
+ZIP vollstaendig entpacken und Installieren.cmd starten.
+Ein vorhandener lokaler Docker-Dienst mit Linux-Containern wird verwendet.
+Der ausgewaehlte Docker-Kontext wird nicht auf desktop-linux umgestellt.
+Unterstuetzt werden AMD64 und ARM64 mit Docker Engine ab 24 und Compose ab 2.20.
+Die vom Docker-Hersteller verlangte Windows-/WSL-/Hardware-Version muss zum
+jeweiligen Docker passen. Vorhandenes funktionierendes Docker wird nicht neu installiert.
+Fehlt Docker, wird der passende offizielle Docker-Desktop-Installer geladen und
+seine Herstellersignatur geprueft. Docker kann einen Neustart oder Zustimmung
+zu seinen Bedingungen benoetigen.
 
-Danach genuegt die Desktop-Verknuepfung "Tentacle Projektmanager".
-Der erste Aufbau und die Downloads koennen 15-30 Minuten oder laenger dauern.
-PHP wird erst beim ersten Start eines passenden Projekts heruntergeladen/gebaut.
-Python, Git, Node.js oder ein vorhandener Webserver sind nicht erforderlich.
-Nach erfolgreicher Einrichtung darf der entpackte Downloadordner geloescht werden.
+Standardordner: %LOCALAPPDATA%\Tentacle\WebsiteManager
+VMM_INSTALL_DIR kann einen eigenen Installationsordner vorgeben.
+Ein erneuter Setup-Aufruf erkennt die bestehende Installation; Projekte,
+Datenbanken, Zusatzwerte in .env und Zertifikate bleiben erhalten.
 
-VORAUSSETZUNGEN
-Windows 11 ab 23H2, Intel-/AMD-Prozessor mit 64 Bit, mindestens 8 GB RAM,
-mindestens 20 GB freier Platz (mehr fuer Projekte/Backups), Internetzugang,
-aktivierte Hardware-Virtualisierung. ARM-PCs und Windows Server sind in
-diesem Paket nicht unterstuetzt. Windows muss noch vom Hersteller unterstuetzt
-sein; fuer Docker gelten zusaetzlich dessen aktuelle Systemanforderungen.
-Docker wird beim Installieren aktuell vom Hersteller geladen und seine digitale
-Signatur wird vor dem Ausfuehren geprueft. Das Paket ist kein Offline-Installer.
-
-Die Docker-Nutzungsbedingungen werden direkt in Docker angezeigt.
-Fuer bestimmte Organisationen ist Docker Desktop kostenpflichtig; die
-Lizenzwahl muss zur Firma passen:
-https://docs.docker.com/subscription/desktop-license/
-
-WAS EINGERICHTET WIRD
-- WSL 2 als Windows-Unterstuetzung fuer Linux-Container, ohne Ubuntu-Einrichtung.
-- Docker Desktop fuer das angemeldete Benutzerkonto, falls es noch fehlt.
-- Projektmanager, zentrale MariaDB und phpMyAdmin sowie lokales Wildcard-DNS.
-- Eine DNS-Regel nur fuer vmm.test und dessen Subdomains. Andere DNS-Regeln
-  und die allgemeinen DNS-Server der Netzwerkkarte werden beibehalten.
-- Ein lokales HTTPS-Zertifikat fuer vmm.test und *.vmm.test mit eigener,
-  auf vmm.test begrenzter Stammzertifizierungsstelle im Windows-Benutzerkonto.
-  Der private Schluessel der Stammzertifizierungsstelle wird nicht gespeichert.
-- Desktop- und Startmenue-Verknuepfungen. Keine automatische Windows-Anmeldung.
+Die Installation prueft Docker-Server, Architektur und Compose und verwendet
+ein zur Docker-Servergeneration passendes Manager-Image. Datenbanken werden
+erst bei einem Projekt angelegt. PHP und Datenbankprofil koennen automatisch
+nach vorhandenen CMS-/Erweiterungsanforderungen oder explizit gewaehlt werden.
+Vorhandene Datenbankvolumes werden nicht auf andere Serverversionen umgestellt.
 
 Dashboard: http://localhost:8090/
-Datenbankverwaltung: http://localhost:8091/
-Alle veroeffentlichten Dienste binden an 127.0.0.1 fuer diesen PC.
-Es wird eine leere, eigenstaendige Installation angelegt. Projekte, CMS-Archive,
-Backups, Passwoerter und Lizenzschluessel aus dem Ursprungsrechner fehlen bewusst.
-Bestehende Websites bitte anschliessend ueber Akeeba-Backups importieren.
-Originale kickstart.php bei Bedarf im Dashboard unter System hinterlegen.
-
-ABLAGE UND HILFE
-Programm: %LOCALAPPDATA%\Tentacle\WebsiteManager
-Projektdaten und Sicherungen: dort im Unterordner data
-Einrichtungsprotokolle: dort im Unterordner logs
-Datenbanken liegen zusaetzlich im Docker-Volume vmm-runtime_database.
-Fuer Sicherungen/Umzuege SQL- bzw. Projektexporte erstellen. Nur den
-Programmordner zu kopieren sichert die Datenbanken nicht vollstaendig.
-
-Bei Fehlern die Meldung lesen, Ursache beheben und Installieren.cmd bzw.
-"Tentacle Einrichtung fortsetzen" erneut oeffnen. Projektdaten werden erhalten.
-Ein blockierter Download, gesperrte PowerShell-Skripte, fehlende Administratorrechte
-oder Firmenrichtlinien muessen durch die IT freigegeben werden.
-Falls Ports bereits verwendet werden, den Konflikt mit der IT klaeren.
-Andere Programme oder Docker-Stacks werden nicht automatisch beendet.
-Wenn Projektadressen nicht aufloesen: VPN-/Firmen-DNS pruefen. Ein Browser mit
-eigenem "Sicherem DNS" muss fuer vmm.test die Windows-Aufloesung verwenden.
-Edge/Chrome nutzen den Windows-Zertifikatsspeicher; bei Firefox kann zusaetzlich
-die Nutzung der Windows-Stammzertifikate erforderlich sein.
-
-HTTPS-ERNEUERUNG (nach einem Jahr, mit IT-Unterstuetzung)
-Docker Desktop starten. Die drei Dateien rootCA.pem, vmm.test.pem und
-vmm.test-key.pem im Unterordner data\certs gemeinsam sichern und entfernen.
-Die installierte Installieren.ps1 ueber Rechtsklick > Mit PowerShell ausfuehren.
-Sie erzeugt eine neue Vertrauenskette und vertraut ihr im Benutzerkonto.
-Alte "Tentacle Local Projects CA"-Zertifikate anhand ihres Fingerabdrucks im
-Windows-Zertifikatsmanager entfernen. Keine fremden Zertifikate entfernen.
-
-ENTFERNEN (mit IT-Unterstuetzung)
-Vorher Projekte und Datenbanken exportieren/sichern.
-Die Compose-Stacks tentacle-manager und tentacle-gateway sowie den zentralen
-Stack vmm-runtime stoppen/entfernen. Keine Volumes loeschen, solange Daten
-noch gebraucht werden. Erst danach Programmordner und Verknuepfungen entfernen.
-Die eigens angelegte DNS-Regel laesst sich in einer Administrator-PowerShell mit
-folgendem Befehl entfernen:
-Get-DnsClientNrptRule | Where-Object { $_.Comment -eq 'Tentacle Website Manager local DNS' } | ForEach-Object { Remove-DnsClientNrptRule -Name $_.Name -Force }
-Das zugehoerige "Tentacle Local Projects CA"-Zertifikat aus den vertrauenswuerdigen
-Stammzertifikaten des aktuellen Benutzers entfernen. Docker und WSL bleiben
-installiert und koennen bei Bedarf separat in Windows entfernt werden.
-
-TECHNISCHE QUELLEN
-https://docs.docker.com/desktop/setup/install/windows-install/
-https://learn.microsoft.com/windows/wsl/basic-commands
-
-PRUEFSTAND
-Paketinhalt, Konfiguration, Zertifikatserzeugung und Anwendungstests werden
-beim Erstellen geprueft. Eine vollstaendige Installation auf einem frischen
-Windows-PC wurde auf dem Mac des Erstellers nicht ausgefuehrt.
+Spaeter: Desktop-Verknuepfung Tentacle Projektmanager.
+Programmupdates: System -> Manager-Updates.
+Installationspruefung: data\setup-report.json
+Weitere Protokolle: logs\ im Installationsordner.
+Bei einem Fehler bitte diese Meldung weitergeben; vorhandene Daten nicht loeschen.

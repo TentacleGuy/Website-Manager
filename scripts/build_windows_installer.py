@@ -3,6 +3,7 @@ import argparse
 import hashlib
 from pathlib import Path
 import zipfile
+import shutil
 
 ROOT = Path(__file__).resolve().parents[1]
 NAME = 'Tentacle-Projektmanager-Windows-Setup'
@@ -11,6 +12,11 @@ FILES = ('Dockerfile', 'compose.yaml', 'requirements.txt', '.dockerignore',
 
 
 def source_files(root):
+    for system in ('windows','macos','linux'):
+        target=root/'app/installer_assets'/system
+        target.mkdir(parents=True,exist_ok=True)
+        for file in (root/'installer'/system).iterdir():
+            if file.is_file() and file.suffix in ('.sh','.command','.ps1','.cmd','.txt'):shutil.copyfile(file,target/file.name)
     files = [root / item for item in FILES]
     for directory in ('app', 'infra/runtime'):
         files.extend(p for p in (root / directory).rglob('*') if p.is_file()

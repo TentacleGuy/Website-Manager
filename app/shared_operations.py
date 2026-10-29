@@ -5,6 +5,7 @@ import re
 import threading
 from pathlib import Path
 from shared_runtime import database_info, write_config, atomic
+from database_profiles import profile,sql_command
 
 LOCK=threading.RLock()
 
@@ -28,22 +29,29 @@ def sync():
 
 def ensure_database(p):
     op,args=context()
-    op.command(args+['up','-d','--wait','--wait-timeout','180','db','phpmyadmin'],timeout=300)
+    op.command(args+['up','-d','--wait','--wait-timeout','180',profile(p)['service'],'phpmyadmin'],timeout=300)
     info=database_info(p)
     # Data goes to stdin; passwords are never command arguments.
     sql=(f"CREATE DATABASE IF NOT EXISTS `{info['database']}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\n"
          f"CREATE USER IF NOT EXISTS '{info['user']}'@'%' IDENTIFIED BY '{p['db_password']}';\n"
          f"GRANT ALL PRIVILEGES ON `{info['database']}`.* TO '{info['user']}'@'%';\n")
-    op.command(args+['exec','-T','db','sh','-c','exec mariadb -uroot -p"$MARIADB_ROOT_PASSWORD"'],input=sql.encode())
+    op.command(args+sql_command(p),input=sql.encode())
+    actual=op.command(args+sql_command(p,extra=['-N']),input=b'SELECT VERSION();').decode().strip()
+    from compatibility import requirements,satisfies
+    item=profile(p)
+    from compatibility import pending_requirements
+    for req in requirements(op.folder(p)/'site',p['cms'],p.get('version',''))+pending_requirements(p):
+        constraint=req.get('database',{}).get(item['engine'])
+        if constraint and not satisfies(actual,constraint):raise ValueError(req['label']+' benötigt '+item['engine']+' '+constraint+'; die Datenbank meldet '+actual+'.')
 
 
 def exec_php(p, command, **kwargs):
     op,args=context();site='/vmm-projects/'+p['slug']+'/site'
     service='php'+p['php'].replace('.','')
     running=op.command(args+['--profile','*','ps','--services','--status','running'],timeout=20).decode().splitlines()
-    if service not in running:
-        op.ensure_runtime(p['php'])
-        op.command(args+['up','-d','--wait','--wait-timeout','180',service],timeout=1800)
+    if service not in running:op.ensure_runtime(p['php'])
+    # Compose also recreates a running worker when its runtime image has changed.
+    op.command(args+['up','-d','--wait','--wait-timeout','180',service],timeout=1800)
     command=[part.replace('/vmm-tools/','/vmm-projects/'+p['slug']+'/tools/') if isinstance(part,str) else part for part in command]
     return op.command(args+['exec','-T','-w',site,'-e','VMM_PROJECT_ROOT='+site,'php'+p['php'].replace('.','')]+command,**kwargs)
 
@@ -53,10 +61,13 @@ def transition(p,action,php=None):
     with LOCK:
         op,args=context();flag=DATA/'shared/state'/(p['slug']+'.enabled')
         if action=='start':
-            version=php or p['php'];op.prepare(p);op.compatible(p,version);op.ensure_runtime(version);ensure_database(p)
+            op.prepare(p)
+            from compatibility import resolve
+            resolve(p,op.folder(p)/'site')
+            version=php or p['php'];op.compatible(p,version);op.ensure_runtime(version);op.check_modules(p,version);ensure_database(p)
             sync();op.command(args+['up','-d','--wait','--wait-timeout','180','php'+version.replace('.','')],timeout=1800)
             atomic(flag,'enabled\n')
-            with db() as c:c.execute("UPDATE projects SET status='running',php=?,error=NULL WHERE slug=?",(version,p['slug']))
+            with db() as c:c.execute("UPDATE projects SET status='running',php=?,php_mode=?,error=NULL WHERE slug=?",(version,'manual' if php else p.get('php_mode','manual'),p['slug']))
             return 'Projekt aktiviert. Gemeinsame PHP-Laufzeit bereit.'
         flag.unlink(missing_ok=True)
         with db() as c:c.execute("UPDATE projects SET status='stopped',error=NULL WHERE slug=?",(p['slug'],))
@@ -115,13 +126,13 @@ def migrate(name):
             (backup/'site.zip').chmod(0o600)
             candidate={**p,'storage':'shared'};ensure_database(candidate)
             _,args=context();info=database_info(candidate)
-            op.command(args+['exec','-T','db','sh','-c','exec mariadb -uroot -p"$MARIADB_ROOT_PASSWORD" "$1"','vmm',info['database']],input=dump,timeout=300)
+            op.command(args+sql_command(candidate,database=True),input=dump,timeout=300)
             # Verify imported row counts for every table before changing CMS configuration.
             script="SELECT CONCAT(TABLE_NAME,':',COALESCE(TABLE_ROWS,0)) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() ORDER BY TABLE_NAME"
             # Exact row counts use safe quoted identifiers, generated inside MariaDB.
             countsql="SELECT CONCAT('SELECT ',QUOTE(TABLE_NAME),' AS t, COUNT(*) AS n FROM `',REPLACE(TABLE_NAME,'`','``'),'`;') FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() ORDER BY TABLE_NAME;"
             sourcebase=old_args+['exec','-T','db','sh','-c','exec mariadb -N -uwebsite -p"$MARIADB_PASSWORD" website']
-            targetbase=args+['exec','-T','db','sh','-c','exec mariadb -N -uroot -p"$MARIADB_ROOT_PASSWORD" "$1"','vmm',info['database']]
+            targetbase=args+sql_command(candidate,extra=['-N'],database=True)
             queries=op.command(sourcebase,input=countsql.encode());before=op.command(sourcebase,input=queries);after=op.command(targetbase,input=queries)
             if before!=after:raise RuntimeError('Tabellenvergleich nach Import fehlgeschlagen; Original bleibt erhalten.')
             (backup/'verified.json').write_text(json.dumps({'table_counts_equal':True,'tables':len(before.decode().splitlines())}))
@@ -151,7 +162,7 @@ def snapshot(p):
         try:
             if php:op.command(args+['pause']+php);paused=True
             info=database_info(p)
-            dump=op.command(args+['exec','-T','db','sh','-c','exec mariadb-dump -uroot -p"$MARIADB_ROOT_PASSWORD" --single-transaction --routines --triggers "$1"','vmm',info['database']],timeout=300)
+            dump=op.command(args+sql_command(p,dump=True,database=True),timeout=300)
             root=DATA/'exports';root.mkdir(exist_ok=True);target=root/(p['slug']+'-'+str(int(time.time()))+'-'+secrets.token_hex(3)+'.zip');temp=target.with_suffix('.partial')
             with zipfile.ZipFile(temp,'w',zipfile.ZIP_DEFLATED) as z:
                 z.writestr('database.sql',dump);z.writestr('project.json',json.dumps({k:p[k] for k in ('slug','cms','php','version')}))

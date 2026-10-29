@@ -60,6 +60,7 @@ def delete_project(name):
     p=project(name)
     if p['storage']!='shared':raise ValueError('Ältere Volume-Projekte zuerst auf gemeinsame Laufzeiten umstellen.')
     from shared_operations import context,LOCK
+    from database_profiles import profile,sql_command
     # Serialize against shared stack reconfiguration and preserve rollback material.
     with LOCK:
         archive=DATA/'trash'/(name+'-'+str(int(time.time()))+'-'+secrets.token_hex(3));archive.mkdir(parents=True)
@@ -69,10 +70,10 @@ def delete_project(name):
         moved=False;meta=None
         try:
             # Stopped / never provisioned projects may not have a database yet.
-            op.command(args+['up','-d','--wait','--wait-timeout','180','db'],timeout=300)
-            exists=op.command(args+['exec','-T','db','sh','-c','exec mariadb -N -uroot -p"$MARIADB_ROOT_PASSWORD"'],input=("SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME='"+info['database']+"';").encode()).decode().strip()
+            op.command(args+['up','-d','--wait','--wait-timeout','180',profile(p)['service']],timeout=300)
+            exists=op.command(args+sql_command(p,extra=['-N']),input=("SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME='"+info['database']+"';").encode()).decode().strip()
             if exists:
-                dump=op.command(args+['exec','-T','db','sh','-c','exec mariadb-dump -uroot -p"$MARIADB_ROOT_PASSWORD" --single-transaction --routines --triggers "$1"','manager',info['database']],timeout=300)
+                dump=op.command(args+sql_command(p,dump=True,database=True),timeout=300)
                 (archive/'database.sql').write_bytes(dump);(archive/'database.sql').chmod(0o600)
             with db() as c:
                 meta={'project':dict(p),'database_exists':bool(exists),'credentials':[dict(r) for r in c.execute('SELECT * FROM credentials WHERE project=?',(name,))],'plans':[dict(r) for r in c.execute('SELECT * FROM extension_plans WHERE project=?',(name,))],'assignments':[dict(r) for r in c.execute('SELECT * FROM project_extensions WHERE project=?',(name,))]}

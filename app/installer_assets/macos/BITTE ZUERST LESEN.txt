@@ -1,0 +1,123 @@
+TENTACLE PROJEKTMANAGER - EINRICHTUNG AUF EINEM MAC
+
+1. Die ZIP-Datei per Doppelklick vollstaendig entpacken.
+2. Den entpackten Ordner oeffnen und Installieren.command doppelklicken.
+3. Ein Terminalfenster zeigt den Fortschritt. Docker wird bei Bedarf passend
+   zum Mac-Prozessor heruntergeladen und installiert. Bitte Geduld haben:
+   Der erste Aufbau kann 15-30 Minuten oder laenger dauern.
+4. macOS fragt nach Administratorrechten fuer Docker sowie fuer die lokalen
+   Projektadressen und HTTPS. Die Abfragen bestaetigen; bei Firmen-Macs kann
+   die IT dabei helfen. Das Passwort wird nicht in Protokollen gespeichert.
+5. Im Docker-Fenster die Nutzungsbedingungen lesen und bestaetigen sowie
+   eine eventuell angezeigte Ersteinrichtung abschliessen. Eine angebotene
+   Anmeldung kann normalerweise uebersprungen werden, sofern die Firmenrichtlinie
+   keine Anmeldung verlangt.
+6. Zum Abschluss oeffnet sich der Projektmanager im Browser.
+
+Ab dann auf dem Schreibtisch "Tentacle Projektmanager.command" doppelklicken.
+Ein weiterer Starter liegt im Ordner Programme innerhalb des Benutzerordners.
+Der entpackte Downloadordner wird danach nicht mehr benoetigt.
+
+Falls die Einrichtung unterbrochen wird, auf dem Schreibtisch
+"Tentacle Einrichtung fortsetzen.command" oeffnen oder Installieren.command
+erneut starten. Der Installer erhaelt bereits angelegte Projektdaten.
+
+FALLS MACOS DAS OEFFNEN ZUNAECHST BLOCKIERT
+Dieses weitergegebene Einrichtungsskript ist nicht von Apple notarisiert.
+Nach dem ersten Oeffnungsversuch unter Systemeinstellungen > Datenschutz &
+Sicherheit den Eintrag fuer diesen Installer pruefen und gegebenenfalls
+"Dennoch oeffnen" bestaetigen. Bei einem verwalteten Firmen-Mac die IT fragen.
+Apples Beschreibung: https://support.apple.com/de-de/102445
+Der Installer schaltet Gatekeeper nicht ab und entfernt keine Quarantaene-Markierungen.
+
+VORAUSSETZUNGEN
+- Mac mit Apple Silicon (M-Serie) oder Intel. Der passende Download wird
+  automatisch gewaehlt, auch wenn das Terminal unter Rosetta gestartet wurde.
+- Eine von der aktuellen Docker-Version unterstuetzte macOS-Version. Die
+  Mindestversion im heruntergeladenen Docker-Paket wird vor der Installation
+  geprueft. Docker unterstuetzt die aktuelle und die zwei vorherigen grossen
+  macOS-Versionen; bei einem aelteren System zuerst macOS aktualisieren lassen.
+- Mindestens 4 GB Arbeitsspeicher, empfohlen mindestens 8 GB.
+- Mindestens 20 GB freier Speicher und mehr fuer Projekte/Backups.
+- Internetzugang und ein Administratorkonto fuer die Systemeinrichtung.
+Python, Homebrew, Git, Node.js, Xcode und ein Webserver muessen nicht installiert
+sein. Alles fuer die Anwendung laeuft in Docker. PHP wird bei der ersten
+Verwendung der entsprechenden Version gebaut.
+
+Docker wird direkt vom Hersteller geladen. Vor dem Ausfuehren werden die
+Docker-Herstellersignatur und die macOS-Sicherheitsbewertung geprueft.
+Die Lizenzbedingungen muessen zur Firma passen:
+https://docs.docker.com/subscription/desktop-license/
+Eine bereits vorhandene Docker-Installation wird weiterverwendet.
+
+WAS EINGERICHTET WIRD
+- Docker Desktop unter Programme, falls es noch nicht installiert ist.
+- Projektmanager, zentrale MariaDB und phpMyAdmin.
+- Lokales DNS auf 127.0.0.1:1053 fuer vmm.test und dessen Subdomains.
+- Eine Resolver-Datei /etc/resolver/vmm.test. Allgemeine Netzwerk-DNS-Server
+  werden nicht geaendert; eine abweichende vorhandene Resolver-Datei wird
+  nicht ueberschrieben. In diesem Fall zeigt das Setup eine Meldung.
+- Lokales HTTPS fuer vmm.test und *.vmm.test. Die eigene lokale
+  Stammzertifizierungsstelle wird im Systemschluesselbund als vertrauenswuerdig
+  eingetragen. Ihr privater Schluessel wird nicht aufbewahrt.
+- Starter auf dem Schreibtisch und unter ~/Applications.
+Alle veroeffentlichten Dienste binden an 127.0.0.1 fuer diesen Mac.
+Es werden keine Docker-Dienste anderer Anwendungen automatisch beendet.
+
+Dashboard: http://localhost:8090/
+Datenbankverwaltung: http://localhost:8091/
+
+Es wird eine leere, eigenstaendige Installation angelegt. Das Paket enthaelt
+keine Projekte, CMS-Archive, Backups, Passwoerter oder Lizenzschluessel des
+Ursprungsrechners. Bestehende Websites anschliessend ueber Akeeba-Backups
+importieren. Die originale kickstart.php bei Bedarf im Dashboard hinterlegen.
+
+ABLAGE UND HILFE
+Programm: ~/Library/Application Support/Tentacle/WebsiteManager
+Projektdaten, Archive und Backups: dort im Unterordner data
+Einrichtungsprotokolle: dort im Unterordner logs
+Im Finder ueber Gehe zu > Gehe zum Ordner die obige Adresse einfuegen.
+Datenbanken liegen zusaetzlich im Docker-Volume vmm-runtime_database.
+Fuer Umzuege/Sicherungen SQL- bzw. Projektexporte erstellen. Das Kopieren des
+Programmordners allein sichert die Datenbanken nicht vollstaendig.
+
+Bei einem Fehler Meldung und Protokoll pruefen, Ursache beheben und die
+Einrichtung erneut starten. Bei belegten Ports, blockierten Downloads,
+Firmen-DNS/VPN oder fehlenden Rechten die IT kontaktieren. Eine bestehende
+abweichende vmm.test-Resolver-Datei muss bewusst durch die IT geklaert werden.
+Wenn ein Browser eigene DNS-Server verwendet, muss er fuer vmm.test die
+macOS-Aufloesung verwenden. Safari und Chrome nutzen den Systemschluesselbund;
+Firefox kann eine zusaetzliche Zertifikatseinstellung erfordern.
+
+HTTPS-ERNEUERUNG (nach einem Jahr, mit IT-Unterstuetzung)
+Docker starten. Die Dateien rootCA.pem, rootCA.cer, vmm.test.pem und
+vmm.test-key.pem unter data/certs gemeinsam sichern und entfernen.
+Die installierte Installieren.command erneut oeffnen. Sie erzeugt neue
+Zertifikate und vertraut der neuen Stammzertifizierungsstelle. Alte
+"Tentacle Local Projects CA"-Eintraege anhand des Fingerabdrucks im
+Systemschluesselbund identifizieren und entfernen, keine fremden Eintraege.
+
+ENTFERNEN (mit IT-Unterstuetzung)
+Vorher Projekte und Datenbanken exportieren/sichern. In Docker Desktop die
+Stacks tentacle-manager, tentacle-gateway und vmm-runtime stoppen/entfernen.
+Keine Volumes loeschen, solange die Daten noch gebraucht werden.
+Anschliessend Programmordner und Starter entfernen. Die zugehoerige
+/etc/resolver/vmm.test-Datei entfernen und den eigenen
+"Tentacle Local Projects CA"-Eintrag im Systemschluesselbund entfernen.
+Docker bleibt installiert und kann bei Bedarf separat entfernt werden.
+
+TECHNISCHE QUELLEN
+https://docs.docker.com/desktop/setup/install/mac-install/
+https://docs.docker.com/desktop/setup/install/mac-permission-requirements/
+
+PRUEFSTAND
+Das Paket wird auf macOS auf Skript-Syntax, Paketinhalt und Ausfuehrungsrechte
+sowie durch automatisierte Konfigurations- und Anwendungstests geprueft.
+60 automatisierte Tests sind bestanden. Auf dem Apple-Silicon-Mac wurden
+zusaetzlich das gebaute Anwendungsimage, der laufende Projektmanager samt Logo,
+DNS ueber UDP/TCP und HTTPS durch Traefik mit vollstaendiger Zertifikatspruefung
+in einer getrennten Containerumgebung erfolgreich geprueft. Auch die native
+macOS-Zertifikatspruefung war erfolgreich. Dabei wurden keine DNS-Einstellungen
+und keine Eintraege des Systemschluesselbunds des Test-Macs geaendert.
+Eine vollstaendige Neuinstallation einschliesslich Docker-Download und Aenderung
+des Systemschluesselbunds wurde nicht auf einem leeren Mac durchgefuehrt.

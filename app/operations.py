@@ -93,6 +93,9 @@ def prepare(p):
     unpack(source,staging)
     if site.exists(): site.rmdir()
     staging.rename(site)
+    from compatibility import resolve
+    resolve(p,site)
+    write_tools(p)
     if p['cms']=='wordpress':
         conf="""<?php
 $host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'PROJECT.vmm.test:8084';
@@ -111,8 +114,8 @@ require_once ABSPATH.'wp-settings.php';
 """
         salts='\n'.join("define('"+key+"','"+secrets.token_hex(32)+"');" for key in ('AUTH_KEY','SECURE_AUTH_KEY','LOGGED_IN_KEY','NONCE_KEY','AUTH_SALT','SECURE_AUTH_SALT','LOGGED_IN_SALT','NONCE_SALT'))
         from shared_runtime import database_info
-        info=database_info(p) if p.get('storage')=='shared' else {'database':'website','user':'website'}
-        conf=conf.replace("define('DB_NAME','website')","define('DB_NAME','"+info['database']+"')").replace("define('DB_USER','website')","define('DB_USER','"+info['user']+"')")
+        info=database_info(p) if p.get('storage')=='shared' else {'database':'website','user':'website','host':'db'}
+        conf=conf.replace("define('DB_NAME','website')","define('DB_NAME','"+info['database']+"')").replace("define('DB_USER','website')","define('DB_USER','"+info['user']+"')").replace("define('DB_HOST','db')","define('DB_HOST','"+info['host']+"')")
         (site/'wp-config.php').write_text(conf.replace('PROJECT',p['slug']).replace('__DB_PASSWORD__',json.dumps(p['db_password'])).replace('SALTS',salts))
         mu=site/'wp-content'/'mu-plugins';mu.mkdir(parents=True,exist_ok=True)
         (mu/'vmm-local.php').write_text("<?php\nadd_filter('pre_wp_mail', function(){ return false; });\n")
@@ -123,12 +126,26 @@ require_once ABSPATH.'wp-settings.php';
 
 def compatible(p,php):
     site=folder(p)/'site'
+    from compatibility import requirements,validate_php
+    validate_php(requirements(site,p['cms'],p.get('version','')),php)
     source=site/'cli'/'joomla.php' if p['cms']=='joomla' else site/'wp-includes'/'version.php'
     if not source.is_file(): return
     pattern=r"JOOMLA_MINIMUM_PHP\s*=\s*'([0-9.]+)'" if p['cms']=='joomla' else r"\$required_php_version\s*=\s*'([0-9.]+)'"
     match=re.search(pattern,source.read_text(errors='replace'))
     if match and tuple(map(int,php.split('.'))) < tuple(map(int,match.group(1).split('.')[:2])):
         raise ValueError('Dieses CMS benötigt mindestens PHP '+match.group(1)+'. Gewählt: '+php+'.')
+
+
+def check_modules(p,php,extra=None):
+    from compatibility import requirements,satisfies,pending_requirements
+    items=requirements(folder(p)/'site',p['cms'],p.get('version',''))+pending_requirements(p)+list(extra or [])
+    required={value for r in items for value in r.get('php_extensions',[])}
+    output=command(['docker','run','--rm','--network','none','vmm-php:'+php,'php','-r','echo json_encode(["version"=>PHP_VERSION,"modules"=>array_map("strtolower",get_loaded_extensions())]);'],timeout=60)
+    actual=json.loads(output)
+    for req in items:
+        if req.get('php') and not satisfies(actual['version'],req['php']):raise ValueError(req['label']+' benötigt PHP '+req['php']+'; das Laufzeitprofil meldet '+actual['version']+'.')
+    missing=required-{value.replace('zend ','') for value in actual['modules']}
+    if missing:raise ValueError('Benötigte PHP-Module fehlen: '+', '.join(sorted(missing))+'. Laufzeitprofil erweitern, bevor die Installation fortgesetzt wird.')
 
 
 def transition(name,action,php=None):
@@ -198,6 +215,10 @@ def install_extension(name,ident):
     if p['cms']=='joomla' and not (folder(p)/'site'/'configuration.php').is_file():
         raise ValueError('Zuerst den Joomla-Installationsassistenten abschließen.')
     compatible(p,p['php'])
+    from compatibility import package_requirements,validate_php
+    from database_profiles import select
+    required=package_requirements(DATA/'extensions'/ext['filename'])
+    validate_php(required,p['php']);select(required,p.get('database_profile') or 'existing');check_modules(p,p['php'],required)
     snapshot(name)
     path='/vmm-extensions/'+ext['filename']
     if p['cms']=='wordpress':
@@ -335,7 +356,8 @@ def reconcile():
             if c.execute("SELECT 1 FROM jobs WHERE resource=? AND status IN ('queued','running')",(p['slug'],)).fetchone(): continue
             if p.get('storage')=='shared':
                 services=states.get('vmm-runtime',{})
-                running=services.get('db')=='running' and (DATA/'shared/state'/(p['slug']+'.enabled')).is_file()
+                from database_profiles import profile
+                running=services.get(profile(p)['service'])=='running' and (DATA/'shared/state'/(p['slug']+'.enabled')).is_file()
                 c.execute('UPDATE projects SET status=? WHERE slug=?',('running' if running else 'stopped',p['slug']))
                 continue
             services=states.get('vmm-'+p['slug'],{})

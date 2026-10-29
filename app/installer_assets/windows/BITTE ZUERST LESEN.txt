@@ -1,0 +1,29 @@
+Tentacle Website Manager - Windows
+
+ZIP vollstaendig entpacken und Installieren.cmd starten.
+Ein vorhandener lokaler Docker-Dienst mit Linux-Containern wird verwendet.
+Der ausgewaehlte Docker-Kontext wird nicht auf desktop-linux umgestellt.
+Unterstuetzt werden AMD64 und ARM64 mit Docker Engine ab 24 und Compose ab 2.20.
+Die vom Docker-Hersteller verlangte Windows-/WSL-/Hardware-Version muss zum
+jeweiligen Docker passen. Vorhandenes funktionierendes Docker wird nicht neu installiert.
+Fehlt Docker, wird der passende offizielle Docker-Desktop-Installer geladen und
+seine Herstellersignatur geprueft. Docker kann einen Neustart oder Zustimmung
+zu seinen Bedingungen benoetigen.
+
+Standardordner: %LOCALAPPDATA%\Tentacle\WebsiteManager
+VMM_INSTALL_DIR kann einen eigenen Installationsordner vorgeben.
+Ein erneuter Setup-Aufruf erkennt die bestehende Installation; Projekte,
+Datenbanken, Zusatzwerte in .env und Zertifikate bleiben erhalten.
+
+Die Installation prueft Docker-Server, Architektur und Compose und verwendet
+ein zur Docker-Servergeneration passendes Manager-Image. Datenbanken werden
+erst bei einem Projekt angelegt. PHP und Datenbankprofil koennen automatisch
+nach vorhandenen CMS-/Erweiterungsanforderungen oder explizit gewaehlt werden.
+Vorhandene Datenbankvolumes werden nicht auf andere Serverversionen umgestellt.
+
+Dashboard: http://localhost:8090/
+Spaeter: Desktop-Verknuepfung Tentacle Projektmanager.
+Programmupdates: System -> Manager-Updates.
+Installationspruefung: data\setup-report.json
+Weitere Protokolle: logs\ im Installationsordner.
+Bei einem Fehler bitte diese Meldung weitergeben; vorhandene Daten nicht loeschen.

@@ -121,13 +121,14 @@ def install(expected):
         labels=own['Config']['Labels'];compose_project=labels['com.docker.compose.project']
         host_data=next(m['Source'] for m in own['Mounts'] if m['Destination']=='/data')
         host_root=host_data.rsplit('/',1)[0]
+        docker_socket=next(m['Source'] for m in own['Mounts'] if m['Destination']=='/var/run/docker.sock')
         image=own['Image']
         helper.write_text(json.dumps({'status':'queued','version':expected,'message':'Update wird vorbereitet.'}))
         try:
             op.command(['docker','run','-d','--name','vmm-update-'+ident,'--label','vmm.manager.update=true',
                 '--mount','type=bind,source='+host_root+',target=/installation',
-                '--mount','type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock',
-                '-e','VMM_UPDATE_PROJECT='+compose_project,'-e','VMM_UPDATE_HOST_DATA='+host_data,
+                '--mount','type=bind,source='+docker_socket+',target=/var/run/docker.sock',
+                '-e','VMM_UPDATE_SOCKET='+docker_socket,'-e','VMM_UPDATE_PROJECT='+compose_project,'-e','VMM_UPDATE_HOST_DATA='+host_data,
                 '-w','/installation',image,'python','/installation/data/updates/'+ident+'/apply.py',ident],timeout=30)
         except Exception:
             helper.write_text(json.dumps({'status':'error','version':expected,'message':'Updatehelfer konnte nicht gestartet werden.'}));raise

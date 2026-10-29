@@ -30,7 +30,17 @@ def restore(name):
     from shared_runtime import database_info
     p=project(name);site=op.folder(p)/'site';cms,version=detect(site)
     with db() as c:c.execute('UPDATE projects SET cms=?,version=? WHERE slug=?',(cms,version,name))
-    p=project(name);op.compatible(p,p['php']);ensure_database(p)
+    p=project(name)
+    from compatibility import resolve
+    source_php=None
+    extra=site/'installation/extrainfo.json'
+    if extra.is_file():
+        try:
+            match=re.match(r'^(\d+\.\d+)',str(json.loads(extra.read_text()).get('php_version','')))
+            if match:source_php=match[1]
+        except (ValueError,OSError):pass
+    resolve(p,site,source_php)
+    op.compatible(p,p['php']);op.ensure_runtime(p['php']);op.check_modules(p,p['php']);ensure_database(p)
     url='http://'+name+'.vmm.test:'+str(op.ports(p['php'])[0])
     op.write_tools(p)
     native=(site/'installation/src/Framework/Cli/InstallationQueue.php').is_file()

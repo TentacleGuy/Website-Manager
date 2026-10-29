@@ -88,17 +88,18 @@ if [ ! -f .env ]; then
     /bin/chmod 600 .env
 fi
 printf '%s\n' 'Projektmanager und lokale HTTPS-Zertifikate werden vorbereitet ...'
-"$DOCKER" build --tag vmm-manager:dev .
-"$DOCKER" run --rm --mount "type=bind,source=$INSTALL_DIR,target=/workspace" --workdir /workspace \
-    vmm-manager:dev python scripts/installer_config.py --host-data "$INSTALL_DIR/data" --dns-port 1053
+source "$INSTALL_DIR/app/installer_assets/docker-environment.sh"
+manager_environment "$INSTALL_DIR"
+"$DOCKER" build --build-arg "DOCKER_CLI_IMAGE=$DOCKER_CLI_IMAGE" --tag vmm-manager:dev .
+"$DOCKER" run --rm --mount "type=bind,source=$INSTALL_DIR,target=/workspace" --mount "type=bind,source=$DOCKER_SOCKET,target=/var/run/docker.sock" --workdir /workspace \
+    vmm-manager:dev python scripts/installer_config.py --host-data "$INSTALL_DIR/data" --dns-port 1053 --check-environment --host-platform darwin
 "$DOCKER" compose -p tentacle-manager config --quiet
 "$DOCKER" compose -p tentacle-gateway -f infra/compose.gateway.yaml config --quiet
 start_manager
 printf '%s\n' 'Gemeinsame Datenbank und phpMyAdmin werden vorbereitet ...'
-"$DOCKER" pull mariadb:10.11
 "$DOCKER" pull phpmyadmin:5.2-apache
 "$DOCKER" compose -p tentacle-manager exec -T manager python -c \
-    "import shared_operations as s; op,args=s.context(); op.command(args+['up','-d','--wait','--wait-timeout','180','db','phpmyadmin'],timeout=300)"
+    "import shared_operations as s; op,args=s.context(); op.command(args+['up','-d','--wait','--wait-timeout','180','phpmyadmin'],timeout=300)"
 
 dns_answer=$(/usr/bin/dig @127.0.0.1 -p 1053 einrichtung.vmm.test A +short +time=3 +tries=1)
 [ "$dns_answer" = 127.0.0.1 ] || { fail 'Der lokale DNS-Dienst antwortet nicht richtig.'; exit 1; }
