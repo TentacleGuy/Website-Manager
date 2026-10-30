@@ -14,11 +14,11 @@ services:
       VMM_HOST_DATA: ${VMM_HOST_DATA:?Set absolute VMM_HOST_DATA in .env}
     volumes:
       - ./data:/data
-      - ${VMM_PROJECTS_PATH:-./data/projects}:/data/projects
-      - ${VMM_EXTENSIONS_PATH:-./data/extensions}:/data/extensions
-      - ${VMM_PACKAGES_PATH:-./data/packages}:/data/packages
-      - ${VMM_BACKUPS_PATH:-./data/backups}:/data/backups
-      - ${VMM_EXPORTS_PATH:-./data/exports}:/data/exports
+      - ${VMM_PROJECTS_PATH:-${VMM_HOST_DATA}/projects}:/data/projects
+      - ${VMM_EXTENSIONS_PATH:-${VMM_HOST_DATA}/extensions}:/data/extensions
+      - ${VMM_PACKAGES_PATH:-${VMM_HOST_DATA}/packages}:/data/packages
+      - ${VMM_BACKUPS_PATH:-${VMM_HOST_DATA}/backups}:/data/backups
+      - ${VMM_EXPORTS_PATH:-${VMM_HOST_DATA}/exports}:/data/exports
       - ${VMM_DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
     networks:
       - gateway
