@@ -58,6 +58,18 @@ Nicht jede Erweiterung veröffentlicht vollständige Systemanforderungen. Fehlen
 
 Nur genannte Datenbankfamilien sind dann zulässig. Die Erweiterungsquellen-API akzeptiert dieselben Angaben unter `requirements`. Widersprüchliche Anforderungen halten den Vorgang mit einer Fehlermeldung an. Später heruntergeladene Erweiterungen werden vor der Ausführung ihres Installers geprüft; nicht deklarierte SQL-/CMS-Inkompatibilitäten bleiben Gegenstand von Herstellerhinweisen und Praxistests.
 
+## Aktivitäten und Aktionsmeldungen
+
+Das **Activity Log** zeigt standardmäßig die letzten sieben Tage und lädt jeweils 50 Einträge. Über **Von** und **Bis** lassen sich Datum und Uhrzeit frei wählen; Suche, Status und Seitenauswahl gelten innerhalb dieses Zeitraums. Alle Zeitangaben verwenden die lokale Zeitzone des Browsers.
+
+Unter **Alte Logs löschen** einen Zeitpunkt wählen: Endgültig entfernt werden nur erledigte, fehlgeschlagene oder unterbrochene Vorgänge mit einem Beginn **vor** diesem Zeitpunkt. Einträge genau zum gewählten Zeitpunkt sowie laufende und wartende Vorgänge bleiben erhalten.
+
+Aktionen erscheinen als Meldungen unten rechts. Laufende und wartende Vorgänge bleiben sichtbar; Erfolgsmeldungen verschwinden nach 8 Sekunden, Fehler und Unterbrechungen nach 20 Sekunden. Meldungen lassen sich auch vorher schließen. Die Restlaufzeit bleibt beim Neuladen desselben Browser-Tabs erhalten. Alle Vorgänge bleiben unabhängig von der Meldung im Activity Log nachlesbar.
+
+Die Projektübersicht trennt **Erweiterungsupdates** und **CMS-Updates**. Bei Joomla enthält die Erweiterungsprüfung zusätzlich einen Hinweis auf verfügbare CMS-Updates; CMS-Updates werden im CMS-Backend installiert.
+
+Unter **Backups** lassen sich sowohl hochgeladene Akeeba-Backupgruppen einschließlich aller Teilarchive als auch erzeugte Projektsicherungen über **Löschen** endgültig entfernen. Backups für noch offene Wiederherstellungen sind gegen Löschen geschützt. Das Löschen eines Backup-Archivs entfernt kein daraus wiederhergestelltes Projekt.
+
 ## Projekte
 
 ### Neue CMS-Installation
@@ -102,9 +114,33 @@ Die Regeln stehen in `infra/dynamic/protocols.yaml` und werden von `scripts/setu
 
 ## Erweiterungen und Zugangsdaten
 
-Der Katalog unterstützt WordPress.org, Hersteller-Update-XML, direkte ZIP-Downloads und eigene Pakete. Lizenzen können als Hauptlizenz mit projektspezifischen Seitenschlüsseln hinterlegt werden. CMS-Benutzer und gespeicherte Zugänge werden pro Projekt verwaltet. Herstellerfunktionen hängen von den jeweiligen Erweiterungen ab.
+Unter **Erweiterungen** sind **WordPress** und **Joomla** getrennt. Jeder Reiter enthält die Bibliothek, **Gespeicherte Pakete** und **Aus Projekt übernehmen**. Zum Hinzufügen genügt ein ZIP-Paket: CMS, Name und Version werden erkannt. Joomla-Update-XML wird aus dem Manifest übernommen; WordPress.org wird nur bei einer passenden Paketidentität verwendet. Eine fremde WordPress-`Update URI` ist keine ausreichende Downloadquelle und bleibt zunächst ungeklärt.
+
+**Gespeicherte Pakete** zeigt Version, Größe und Datum sowie Download, Installation und Löschen. Löschen entfernt das ZIP aus dem Archiv, keine installierte Website. Installationszuordnungen bleiben erhalten. Pakete werden während laufender Installationen und Downloads gegen Löschen geschützt.
+
+Beim Bearbeiten einer Erweiterung kann ein globaler Lizenz-/API-Key hinterlegt werden. Abweichende Schlüssel werden unter **Projekt → Lizenzen** verwaltet und bleiben an dieses Projekt gebunden. Bestehende Lizenzdaten werden beibehalten; Anbieter und Pakettyp müssen in der normalen Oberfläche nicht ausgewählt werden. Eine Herstelleraktivierung im CMS ist weiterhin vom jeweiligen Hersteller abhängig.
+
+**Aus Projekt übernehmen** liest die native Updateanbindung einer laufenden, vollständig eingerichteten Website. Eine erkannte Quelle kann übernommen oder das neueste Originalpaket direkt archiviert werden. WordPress nutzt seine eigenen Updateinformationen und bei WPML zusätzlich den vorhandenen OTGS Installer. Joomla verwendet die registrierten Update-XML-Adressen. Die Website wird dabei nicht aktualisiert. Lizenzschlüssel aus der Website bleiben projektgebunden und werden nicht zu globalen Schlüsseln gemacht.
+
+Projektbasierte Quellen benötigen ihr Herkunftsprojekt weiterhin zum Abfragen frischer Downloadlinks. Signierte Links werden nicht dauerhaft als Updatequelle gespeichert. Fehlt eine unterstützte Quelle, ein gültiger Zugang oder ein Originaldownload, meldet der Manager dies; aus installierten Dateien wird kein vermeintliches Herstellerpaket zusammengesetzt. Die Erkennung benötigt keine Ausführung hochgeladener Pakete.
 
 Vor Erweiterungsinstallationen und Sammelupdates erzeugt der Manager Datei-/SQL-Sicherungen. Gemeinsame PHP-Container werden dafür kurz pausiert und anschließend fortgesetzt. Unter **Backups → Projektsicherungen** stehen die Exporte zum Download. Diese Manager-Exporte sind keine Akeeba-Archive; ihr automatischer Rückimport ist nicht enthalten.
+
+## Speicherorte
+
+Unter **System → Speicherorte** werden die Ordner für Projekte, Erweiterungspakete, CMS-Archive, Akeeba-Backups und Projektsicherungen angezeigt, einschließlich belegtem und freiem Speicher. Die Pfade beziehen sich auf den **Docker-Rechner**, nicht auf einen entfernten Browser. Datenbanken bleiben in ihren bisherigen Docker-Volumes; Manager-Metadaten, Zertifikate und Zugangsdaten behalten den bisherigen Datenordner.
+
+Neue absolute Pfade eintragen, **Speicherorte prüfen** wählen und anschließend **Daten kopieren und Speicherorte übernehmen**. Zielordner werden bei Bedarf angelegt und müssen leer, beschreibbar und ausreichend groß sein. Laufende Jobs und Uploads müssen beendet sein. Bei der Umstellung startet der Manager neu und betroffene PHP-Laufzeiten werden kurz angehalten. Dateien werden kopiert und über SHA-256 verglichen, bevor die neuen Einbindungen aktiviert werden. Bisherige Ordner werden nicht automatisch gelöscht. Eine fehlgeschlagene Umstellung setzt die bisherigen Einstellungen zurück; eventuell entstandene Zielkopien bleiben zur Prüfung erhalten.
+
+Die Konfiguration liegt unter `data/storage/settings.json`, wird in `.env` für reguläre Starts und in `data/storage/compose.storage.json` für den Helfer übernommen. Änderungen an diesen Dateien nicht während einer Umstellung vornehmen. Externe Laufwerke müssen beim Start verfügbar sein. Die internen `/data/...`-Pfade bleiben stabil. PHP-Laufzeiten werden vor dem Anhalten anhand ihrer tatsächlichen Projekte-Einbindung auf Zugehörigkeit zu dieser Installation geprüft.
+
+## Akeeba-Backups erstellen
+
+Unter **Projekt → Übersicht → Akeeba-Backups** eine Profilnummer wählen und **Akeeba-Backup erstellen** anklicken. Die Funktion nutzt die installierte native Akeeba-CLI; Akeeba wird nicht automatisch installiert. Für Joomla wird eine unterstützte Akeeba-Installation mit aktiviertem Konsolenplugin benötigt, für WordPress die unterstützte CLI von Akeeba Backup Professional.
+
+Der Manager erzeugt ein echtes vollständiges JPA-Archiv im eingestellten Backup-Ordner. Die gewählte Profilkonfiguration wird für diesen Lauf übersteuert: lokaler Ausgabeordner, JPA-Format, keine Cloud-Nachbearbeitung, keine Löschquoten und keine Akeeba-Abschluss-E-Mails. Gespeicherte Akeeba-Profile werden dabei nicht geändert. Die Profilfilter bleiben wirksam. Erst nach Akeebas Abschlussbestätigung und Prüfung aller Archivteile wird der Download freigegeben.
+
+Die Dateien können einzeln heruntergeladen werden. Bei mehrteiligen Sicherungen steht zusätzlich **Alle Teile als Downloadpaket (.zip)** bereit. Dieses äußere ZIP vor einer Wiederherstellung entpacken; danach JPA und Teilarchive gemeinsam verwenden. Unvollständige Sicherungen werden als Fehler angezeigt und nicht als wiederherstellbares Backup angeboten. Datei-/SQL-Projektsicherungen bleiben eine separate Funktion.
 
 ## Manager-Updates
 
@@ -123,7 +159,7 @@ Der Helfer benötigt eine reguläre Compose-Installation mit `data` als Unterver
 Der GitHub-Workflow führt Tests und Syntaxprüfungen aus und erstellt anschließend ein Release mit `manager-update.zip`, Prüfsumme und den Setup-Paketen für Windows, macOS und Linux. Tag und eingetragene Version müssen übereinstimmen. Für einen lokalen Paketbau:
 
 ```sh
-python3 scripts/build_release.py --tag v1.1.0
+python3 scripts/build_release.py --tag v1.2.0
 ```
 
 Die Paketbauer verwenden eine explizite Dateiliste. Lokale Projekte, `.env`, Datenbanken, Backups, Exporte, Zertifikate und Zugangsdaten sind ausgeschlossen. Kickstart wird zur Laufzeit von Akeeba geladen und nicht mitveröffentlicht.

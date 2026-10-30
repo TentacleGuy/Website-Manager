@@ -1,5 +1,6 @@
 """One PHP service per version, shared MariaDB and loopback-only phpMyAdmin."""
 import json
+import os
 import re
 import secrets
 from pathlib import Path
@@ -14,6 +15,8 @@ def database_info(p):
 
 def stack(host_data, root_password, database_profiles=None):
     host=host_path(host_data)
+    from storage_paths import host_location
+    project_host=host_location('projects',host_data);extension_host=host_location('extensions',host_data);backup_host=host_location('backups',host_data)
     profiles=list(dict.fromkeys([LEGACY]+list(database_profiles or [])))
     services={};volumes={}
     for ident in profiles:
@@ -29,9 +32,9 @@ def stack(host_data, root_password, database_profiles=None):
         labels['traefik.http.services.'+ident+'.loadbalancer.server.port']='80'
         services['php'+suffix]={'image':'vmm-php:'+php,'profiles':['php'+suffix],
             'volumes':[
-                host+'/projects:/vmm-projects',host+'/shared/apache:/etc/apache2/sites-enabled:ro',
+                project_host+':/vmm-projects',host+'/shared/apache:/etc/apache2/sites-enabled:ro',
                 host+'/shared/state:/vmm-state:ro',host+'/shared/tools:/vmm-tools:ro',
-                host+'/extensions:/vmm-extensions:ro'],
+                extension_host+':/vmm-extensions:ro',backup_host+':/vmm-backups'],
             'networks':['default','gateway'],'labels':labels,'restart':'unless-stopped'}
     labels={'traefik.enable':'true','traefik.docker.network':'vmm-gateway',
         'traefik.http.routers.vmm-shared-database.rule':'Host(`localhost`)',
@@ -42,7 +45,7 @@ def stack(host_data, root_password, database_profiles=None):
         'entrypoint':['/bin/sh','-c','ln -sf /vmm-pma/config.php /etc/phpmyadmin/config.user.inc.php; exec /docker-entrypoint.sh "$@"','vmm'],
         'command':['apache2-foreground'],
         'networks':['default','gateway'],'labels':labels,'restart':'unless-stopped'}
-    return {'name':'vmm-runtime','services':services,'volumes':volumes,'networks':{'gateway':{'external':True,'name':'vmm-gateway'}}}
+    return {'name':os.environ.get('VMM_RUNTIME_PROJECT','vmm-runtime'),'services':services,'volumes':volumes,'networks':{'gateway':{'external':True,'name':'vmm-gateway'}}}
 
 
 def atomic(path,text):

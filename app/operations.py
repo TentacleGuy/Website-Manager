@@ -17,8 +17,9 @@ RUNTIME_DOCKERFILE = Path(__file__).resolve().parent.parent/'infra'/'runtime'/'D
 if not RUNTIME_DOCKERFILE.exists(): RUNTIME_DOCKERFILE = Path('/runtime/Dockerfile')
 
 def command(args, **kwargs):
+    allowed=kwargs.pop('allowed_returncodes',(0,))
     result=subprocess.run(args,capture_output=True,timeout=kwargs.pop('timeout',900),**kwargs)
-    if result.returncode:
+    if result.returncode not in allowed:
         def output(value):
             return value.decode(errors='replace') if isinstance(value,bytes) else (value or '')
         # APT and compiler diagnostics often go to stdout. Keeping stderr alone
@@ -71,7 +72,7 @@ if (PHP_SAPI !== 'cli') {
   }
 }
 ''')
-    for name in ('joomla-updates.php','extension-bridge.php','wordpress-extension-updates.php','cms-users.php','restore-backup.php'):
+    for name in ('joomla-updates.php','extension-bridge.php','wordpress-extension-updates.php','cms-users.php','restore-backup.php','library-project.php'):
         shutil.copyfile(Path(__file__).parent/'tools'/name,tools/name)
     from shared_runtime import database_info
     info=database_info(p) if p.get('storage')=='shared' else {'host':'db','database':'website','user':'website','password':p['db_password']}
@@ -283,9 +284,9 @@ def restore_akeeba(name,backup_id,archive,password=''):
         script=folder(p)/'tools'/'extract.php'
         script.write_text("<?php\n$input=json_decode(stream_get_contents(STDIN),true); $argv=['kickstart.php','/vmm-input/'.$input['archive'],'/var/www/html','--silent']; if($input['password']!=='') $argv[]='--password='.$input['password']; $argc=count($argv); $_SERVER['argv']=$argv; $_SERVER['argc']=$argc; require '/vmm-kickstart/kickstart.php';\n")
         command(['docker','run','--rm','--network','none','--read-only','--cap-drop','ALL','--security-opt','no-new-privileges','--tmpfs','/tmp:rw,size=256m',
-            '--mount','type=bind,source='+host+'/projects/'+name+'/site,target=/var/www/html',
-            '--mount','type=bind,source='+host+'/projects/'+name+'/tools,target=/vmm-tools,readonly',
-            '--mount','type=bind,source='+host+'/backups/'+backup_id+',target=/vmm-input,readonly',
+            '--mount','type=bind,source='+__import__('storage_paths').host_location('projects')+'/'+name+'/site,target=/var/www/html',
+            '--mount','type=bind,source='+__import__('storage_paths').host_location('projects')+'/'+name+'/tools,target=/vmm-tools,readonly',
+            '--mount','type=bind,source='+__import__('storage_paths').host_location('backups')+'/'+backup_id+',target=/vmm-input,readonly',
             '--mount','type=bind,source='+host+'/tools/'+kickstart.relative_to(DATA/'tools').as_posix()+',target=/vmm-kickstart/kickstart.php,readonly',
             '-i','vmm-php:'+p['php'],'php','/vmm-tools/extract.php'],input=json.dumps({'archive':archive,'password':password}).encode(),timeout=1800)
         if not (site/'installation'/'index.php').exists(): raise ValueError('Das Archiv enthält keinen unterstützten Akeeba-Wiederherstellungsassistenten.')

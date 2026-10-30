@@ -29,11 +29,19 @@ def init():
         c.execute('CREATE TABLE IF NOT EXISTS packages (id TEXT PRIMARY KEY, cms TEXT, version TEXT, filename TEXT, sha256 TEXT, size INTEGER, source TEXT, created INTEGER)')
         c.execute('CREATE TABLE IF NOT EXISTS releases (cms TEXT, version TEXT, url TEXT, PRIMARY KEY(cms,version))')
         c.execute('CREATE TABLE IF NOT EXISTS jobs (id TEXT PRIMARY KEY, resource TEXT, kind TEXT, status TEXT, message TEXT, created INTEGER, finished INTEGER)')
+        c.execute('CREATE INDEX IF NOT EXISTS jobs_created ON jobs(created DESC)')
         c.execute('CREATE TABLE IF NOT EXISTS extensions (id TEXT PRIMARY KEY, name TEXT, cms TEXT, kind TEXT, provider TEXT, version TEXT, filename TEXT, sha256 TEXT, created INTEGER)')
         c.execute('CREATE TABLE IF NOT EXISTS licenses (id TEXT PRIMARY KEY, provider TEXT, label TEXT, secret TEXT, created INTEGER)')
         c.execute('CREATE TABLE IF NOT EXISTS project_extensions (project TEXT REFERENCES projects(slug), extension TEXT REFERENCES extensions(id), license TEXT REFERENCES licenses(id), status TEXT, PRIMARY KEY(project,extension))')
         c.execute('CREATE TABLE IF NOT EXISTS credentials (id TEXT PRIMARY KEY, project TEXT NOT NULL REFERENCES projects(slug), secret TEXT NOT NULL, created INTEGER, archived INTEGER DEFAULT 0)')
-        c.execute("UPDATE jobs SET status='interrupted', message='Manager wurde während des Vorgangs beendet.', finished=? WHERE status IN ('queued','running')", (int(time.time()),))
+        # A separate storage worker owns this job while the manager is restarted.
+        storage_job=''
+        try:
+            import json
+            state=json.loads((DATA/'storage/apply-status.json').read_text())
+            if state.get('status') in ('queued','running') and time.time()-state.get('time',0)<7200:storage_job=state.get('id','')
+        except (OSError,ValueError):pass
+        c.execute("UPDATE jobs SET status='interrupted', message='Manager wurde während des Vorgangs beendet.', finished=? WHERE status IN ('queued','running') AND id!=?", (int(time.time()),storage_job))
         c.execute("UPDATE projects SET status='unknown' WHERE status IN ('starting','stopping','preparing')")
 
 
@@ -71,7 +79,9 @@ def redact(message):
     return message[-3000:]
 
 def job(resource, kind, fn):
+    from storage_service import busy
     with LOCK, db() as c:
+        if busy():raise ValueError('Die Speicherorte werden gerade umgestellt. Bitte den Abschluss abwarten.')
         if c.execute("SELECT 1 FROM jobs WHERE resource=? AND status IN ('queued','running')", (resource,)).fetchone():
             raise ValueError('Für diesen Eintrag läuft bereits ein Vorgang.')
         ident = secrets.token_hex(12)

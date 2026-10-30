@@ -102,3 +102,17 @@ class SiteLicenseTests(unittest.TestCase):
         lic=ext.save_license({'provider':'same-provider','label':'First only','key':'x','source':first})
         with self.assertRaisesRegex(ValueError,'andere Erweiterung'):ext.validate_plans('wordpress',[{'source':second,'license':lic}],'alpha')
         with self.assertRaises(ValueError):ext.save_license({'provider':'same-provider','label':'Invalid','key':'x','project':'../escape'})
+
+
+class UpdateCountTests(unittest.TestCase):
+    def test_joomla_core_is_separate_from_two_extension_updates(self):
+        items=[{'id':700,'kind':'file','element':'joomla','name':'Joomla','version':'5.4.9','available':'5.4.10','update':'available'},
+               {'id':1001,'kind':'template','element':'helix3','name':'Helix3','update':'available'},
+               {'id':1002,'kind':'template','element':'resort','name':'Resort','update':'available'}]
+        self.assertEqual(ext.inventory_counts(items),{'updates':3,'extension_updates':2,'core_updates':1})
+        self.assertEqual(ext.inventory_counts(items+[items[1]]),ext.inventory_counts(items))
+        with patch('operations.wp_updates',return_value='Helix3 and Resort'),patch('extension_service.installed',return_value=items):
+            text=ext.project_updates('demo')
+        self.assertIn('2 Erweiterungsupdates · 1 CMS-Update',text)
+        self.assertIn('5.4.9 → 5.4.10',text)
+        self.assertIn('im CMS-Backend aktualisieren',text)

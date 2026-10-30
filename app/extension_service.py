@@ -9,7 +9,7 @@ import time
 import xml.etree.ElementTree as ET
 from urllib.parse import urlsplit, urlunsplit, parse_qsl, urlencode, urljoin
 from urllib.request import Request, build_opener, HTTPRedirectHandler
-from store import DATA, db, project, cipher
+from store import DATA, LOCK, db, project, cipher
 import providers
 from catalog import valid_cms, validate_zip, digest, MAX_ARCHIVE
 
@@ -31,6 +31,7 @@ def init():
         c.execute('CREATE TABLE IF NOT EXISTS extension_sources (id TEXT PRIMARY KEY, config TEXT NOT NULL, available TEXT DEFAULT \'[]\', checked INTEGER, error TEXT)')
         cols={r['name'] for r in c.execute('PRAGMA table_info(extensions)')}
         if 'source_id' not in cols:c.execute('ALTER TABLE extensions ADD COLUMN source_id TEXT')
+        if 'archived' not in cols:c.execute('ALTER TABLE extensions ADD COLUMN archived INTEGER DEFAULT 1')
         c.execute('CREATE TABLE IF NOT EXISTS extension_plans (project TEXT REFERENCES projects(slug), source TEXT REFERENCES extension_sources(id), license TEXT REFERENCES licenses(id), version TEXT, status TEXT, error TEXT, PRIMARY KEY(project,source))')
         c.execute("UPDATE extension_plans SET status='error',error='Manager während Installation beendet. Bitte erneut installieren.' WHERE status='installing'")
         for table in ('licenses','credentials'):
@@ -135,15 +136,18 @@ def safe_url(url):
 def save_source(body):
     ident=body.get('id') or secrets.token_hex(12)
     if not re.fullmatch(r'[a-f0-9]{24}',ident):raise ValueError('Ungültige Quellenkennung.')
-    config={k:body.get(k,'') for k in ('name','cms','kind','provider','element','source_type','url','auth_type','auth_parameter','license','fixed_version')}
+    config={k:body.get(k,'') for k in ('name','cms','kind','provider','element','source_type','url','auth_type','auth_parameter','license','fixed_version','origin_project','origin_key')}
     if any(not isinstance(v,str) or len(v)>4096 for v in config.values()):raise ValueError('Quellenfelder müssen Text sein (max. 4096 Zeichen).')
     valid_cms(config['cms'])
     if not config['name'] or not config['provider']:raise ValueError('Name und Anbieter angeben.')
     if config['kind'] not in ('plugin','theme','package'):raise ValueError('Pakettyp auswählen.')
-    if config['source_type'] not in ('upload','update_xml','direct','wordpress_org'):raise ValueError('Unbekannte Downloadquelle.')
+    if config['source_type'] not in ('upload','update_xml','direct','wordpress_org','project'):raise ValueError('Unbekannte Downloadquelle.')
     if config['source_type'] in ('update_xml','direct'):safe_url(config['url'])
     if config['cms']=='wordpress' and config['kind']=='package':raise ValueError('Für WordPress Plugin oder Theme auswählen.')
     if config['source_type']=='wordpress_org' and (config['cms']!='wordpress' or not re.fullmatch(r'[a-z0-9-]+',config['element']) or config['kind']=='package'):raise ValueError('WordPress.org benötigt Plugin-/Theme-Slug und passenden Pakettyp.')
+    if config['source_type']=='project':
+        p=project(config['origin_project'])
+        if p['cms']!=config['cms'] or not config['origin_key']:raise ValueError('Passendes Herkunftsprojekt auswählen.')
     if config['auth_type'] not in ('','none','query','bearer','basic','headers'):raise ValueError('Unbekannte Anmeldung.')
     if config['auth_type']=='query' and not config['auth_parameter']:raise ValueError('Name des Schlüsselparameters fehlt.')
     config['auth_metadata']=bool(body.get('auth_metadata'))
@@ -219,7 +223,10 @@ def parse_updates(data,base):
 def check(ident,license_id=None):
     s=source(ident);cred=license_value(s.get('license') if license_id is None else license_id,s['provider'],source_id=ident);kind=s['source_type']
     try:
-        if kind=='upload':items=[]
+        if kind=='project':
+            from extension_library import release,source_key
+            items=release(s,key=source_key(s))
+        elif kind=='upload':items=[]
         elif kind=='update_xml':
             with remote(s['url'],s if s['auth_metadata'] else None,cred) as r:data=r.read(4*1024*1024+1)
             if len(data)>4*1024*1024:raise ValueError('Update-XML zu groß.')
@@ -260,8 +267,8 @@ def package_version(path,cms):
 
 def register_package(path,s,v):
     validate_zip(path);v=package_version(path,s['cms']) or v;sha=digest(path)
-    with db() as c:
-        existing=c.execute('SELECT id FROM extensions WHERE source_id=? AND version=? AND sha256=?',(s['id'],v,sha)).fetchone()
+    with LOCK,db() as c:
+        existing=c.execute('SELECT id FROM extensions WHERE source_id=? AND version=? AND sha256=? AND archived=1',(s['id'],v,sha)).fetchone()
         if existing:return existing['id']
         ident=secrets.token_hex(12);root=DATA/'extensions';root.mkdir(exist_ok=True);shutil.copyfile(path,root/(ident+'.zip'))
         c.execute('INSERT INTO extensions (id,name,cms,kind,provider,version,filename,sha256,created,source_id) VALUES (?,?,?,?,?,?,?,?,?,?)',(ident,s['name'],s['cms'],s['kind'],s['provider'],v,ident+'.zip',sha,int(time.time()),s['id']))
@@ -283,10 +290,18 @@ def compatible(item,p):
 def download_package(ident,v='latest',license_id=None,p=None):
     s=source(ident)
     license_value(s.get('license') if license_id is None else license_id,s['provider'],p['slug'] if p else None,ident)
+    if s['source_type']=='project' and v=='latest':
+        from extension_library import release,source_key
+        return release(s,download=True,key=source_key(s))
+    if s['source_type']=='project':
+        with db() as c:row=c.execute('SELECT * FROM extensions WHERE source_id=? AND version=? AND archived=1 ORDER BY created DESC',(ident,v)).fetchone()
+        if not row:raise ValueError('Diese Version ist nicht gespeichert. Neueste Version herunterladen.')
+        if digest(DATA/'extensions'/row['filename'])!=row['sha256']:raise ValueError('Archiv-Prüfsumme stimmt nicht.')
+        return row['id']
     if s['source_type']!='upload':check(ident,license_id);s=source(ident)
     candidates=[i for i in s['available'] if (v=='latest' or i['version']==v) and (v!='latest' or i.get('stability','stable').lower() in ('stable','') and not re.search(r'alpha|beta|rc|dev',i['version'],re.I)) and (not p or compatible(i,p))]
     if s['source_type']=='upload':
-        with db() as c:rows=[dict(r) for r in c.execute('SELECT * FROM extensions WHERE source_id=?',(ident,))]
+        with db() as c:rows=[dict(r) for r in c.execute('SELECT * FROM extensions WHERE source_id=? AND archived=1',(ident,))]
         rows=[r for r in rows if v=='latest' or r['version']==v];rows.sort(key=lambda r:version_key(r['version']),reverse=True)
         if not rows:raise ValueError('Zuerst ein ZIP-Paket für diese Erweiterung hochladen.')
         row=rows[0]
@@ -294,7 +309,7 @@ def download_package(ident,v='latest',license_id=None,p=None):
         return row['id']
     if not candidates:raise ValueError('Keine passende stabile Version für CMS/PHP gefunden.')
     item=candidates[0]
-    with db() as c:rows=c.execute('SELECT * FROM extensions WHERE source_id=? AND version=?',(ident,item['version'])).fetchall()
+    with db() as c:rows=c.execute('SELECT * FROM extensions WHERE source_id=? AND version=? AND archived=1',(ident,item['version'])).fetchall()
     for row in rows:
         f=DATA/'extensions'/row['filename']
         if f.is_file() and digest(f)==row['sha256']:return row['id']
@@ -420,14 +435,16 @@ def inspect_upload(path):
     import zipfile
     validate_zip(path)
     with zipfile.ZipFile(path) as archive:
-        names=archive.namelist()
+        names=sorted(archive.namelist(),key=lambda name:(name.count('/'),name))
         for name in names:
             if name.lower().endswith('.xml') and name.count('/')<=1:
+                if archive.getinfo(name).file_size>1024*1024:continue
                 try:root=ET.fromstring(archive.read(name))
                 except ET.ParseError:continue
                 if root.tag not in ('extension','install') or not root.findtext('version'):continue
                 kind=root.get('type','package');label=root.findtext('name') or name.rsplit('/',1)[-1][:-4];element=name.rsplit('/',1)[-1][:-4]
                 if kind=='package':element='pkg_'+(root.findtext('packagename') or element.removeprefix('pkg_'))
+                if kind=='template' and re.fullmatch(r'[A-Za-z0-9_-]+',label):element=label
                 if kind=='plugin':element=next((n.get('plugin') for n in root.findall('./files/filename') if n.get('plugin')),element)
                 url=root.findtext('./updateservers/server','').strip()
                 return {'name':label,'cms':'joomla','kind':'theme' if kind=='template' else kind if kind in ('plugin','package') else 'package','element':element,'version':root.findtext('version'),'url':url,'source_type':'update_xml' if url.startswith('https://') else 'upload','auth_type':'query' if root.find('dlid') is not None else 'none','auth_parameter':(root.find('dlid').get('prefix','').rstrip('=') if root.find('dlid') is not None else '')}
@@ -437,29 +454,47 @@ def inspect_upload(path):
                 with archive.open(name) as stream:text=stream.read(16384).decode(errors='replace')
                 found=re.search(r'^[ \t/*]*(Plugin|Theme) Name:\s*(.+)$',text,re.M|re.I)
                 if not found:continue
+                author=re.search(r'^[ \t/*]*Author:\s*(.+)$',text,re.M|re.I)
                 version=re.search(r'^[ \t/*]*Version:\s*(.+)$',text,re.M|re.I);update=re.search(r'^[ \t/*]*Update URI:\s*(.+)$',text,re.M|re.I)
-                return {'name':found[2].strip(),'cms':'wordpress','kind':found[1].lower(),'element':name.split('/')[0] if '/' in name else name[:-4],'version':version[1].strip() if version else '1.0.0','source_type':'upload','auth_type':'none','url':update[1].strip() if update else ''}
+                return {'author':author[1].strip() if author else '', 'name':found[2].strip(),'cms':'wordpress','kind':found[1].lower(),'element':name.split('/')[0] if '/' in name else name[:-4],'version':version[1].strip() if version else '1.0.0','source_type':'upload','auth_type':'none','url':update[1].strip() if update else ''}
     raise ValueError('CMS-Paketdaten konnten nicht erkannt werden. Quelle manuell anlegen und dieses ZIP zuordnen.')
+
+
+def is_core_update(item):
+    return item.get('core', False) or (item.get('kind') == 'file' and item.get('element') == 'joomla')
+
+
+def inventory_counts(items):
+    available = {str(x.get('id', x.get('kind', '') + ':' + x.get('element', x.get('name', '')))): x
+                 for x in items if x.get('update') == 'available'}
+    core = sum(bool(is_core_update(x)) for x in available.values())
+    return {'updates':len(available), 'extension_updates':len(available)-core, 'core_updates':core}
 
 
 def save_inventory(name,items):
     from store import DATA
     root=DATA/'projects'/name
-    payload={'checked':int(time.time()),'updates':sum(x.get('update')=='available' for x in items),'items':items}
+    payload={'checked':int(time.time()),**inventory_counts(items),'items':items}
     (root/'extension-inventory.json').write_text(json.dumps(payload))
 
 def inventory_summary(name):
     from store import DATA
     try:
         data=json.loads((DATA/'projects'/name/'extension-inventory.json').read_text())
-        return {k:data[k] for k in ('checked','updates')}
+        return {'checked':data['checked'],**inventory_counts(data['items'])}
     except (OSError,ValueError,KeyError):return None
 
 
 def project_updates(name,apply=False):
     import operations as op
     result=op.wp_updates(name,apply)
-    try:installed(name)
+    try:
+        items=installed(name)
+        counts=inventory_counts(items)
+        result+='\n'+str(counts['extension_updates'])+' Erweiterungsupdates · '+str(counts['core_updates'])+(' CMS-Update' if counts['core_updates']==1 else ' CMS-Updates')
+        for item in items:
+            if is_core_update(item) and item.get('update')=='available':
+                result+='\nCMS: '+item['name']+': '+item.get('version','')+' → '+item.get('available','')+' (im CMS-Backend aktualisieren)'
     except Exception as exc:result+='\nInventar konnte nicht aktualisiert werden: '+str(exc)
     return result
 
@@ -470,6 +505,7 @@ def update_single(name,ident):
     items=installed(name)
     item=next((x for x in items if str(x.get('id',x.get('element')))==str(ident)),None)
     if not item:raise ValueError('Erweiterung nicht im Projekt gefunden.')
+    if is_core_update(item):raise ValueError('CMS-Updates bitte im CMS-Backend installieren.')
     op.snapshot(name)
     if p['cms']=='wordpress':
         result=op.exec_php(p,['wp','--allow-root',item['kind'],'update',item['element']],timeout=900)

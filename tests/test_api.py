@@ -247,3 +247,138 @@ class ApiTests(unittest.TestCase):
         self.assertIn(key,json.dumps(response));self.assertEqual(next(x for x in response[1]['licenses'] if x['id']==result[1]['id'])['key'],key)
 
 if __name__=='__main__':unittest.main()
+
+
+class ActivityAndBackupTests(unittest.TestCase):
+    request = ApiTests.request
+
+    def test_activity_time_range_pagination_and_status(self):
+        import time
+        now=int(time.time())
+        with db() as c:
+            for i in range(120):
+                c.execute('INSERT INTO jobs VALUES (?,?,?,?,?,?,?)',('activity-page-'+str(i),'activity-pagination','updates','done','Test',now-i,now))
+            c.execute('INSERT INTO jobs VALUES (?,?,?,?,?,?,?)',('activity-old','activity-pagination','updates','done','Old',now-8*86400,now-8*86400))
+        route='/api/jobs?history=1&search=activity-pagination&limit=50'
+        code,data=self.request(route,get=True)
+        self.assertEqual(code,200);self.assertEqual(data['total'],120);self.assertEqual(len(data['jobs']),50)
+        _,second=self.request(route+'&offset=50',get=True)
+        self.assertTrue(set(j['id'] for j in data['jobs']).isdisjoint(j['id'] for j in second['jobs']))
+        _,filtered=self.request(route+'&from='+str(now-10)+'&to='+str(now-5),get=True)
+        self.assertEqual(filtered['total'],6)
+        _,filtered=self.request(route+'&status=running',get=True)
+        self.assertEqual(filtered['total'],0)
+        _,translated=self.request('/api/jobs?history=1&search=pruefen&kind=updates&status=done',get=True)
+        self.assertGreaterEqual(translated['total'],120)
+        self.assertEqual(self.request(route+'&from='+str(now)+'&to=1',get=True)[0],400)
+        self.assertEqual(self.request(route.replace('limit=50','limit=100000'),get=True)[0],400)
+        with db() as c:c.execute("DELETE FROM jobs WHERE resource='activity-pagination'")
+
+    def test_log_deletion_strict_boundary_and_active_protection(self):
+        import time
+        cutoff=int(time.time())-100
+        rows=[('older','done',cutoff-1,cutoff),('boundary','done',cutoff,cutoff),('newer','error',cutoff+1,cutoff+2),('running','running',cutoff-20,None),('queued','queued',cutoff-20,None),('interrupted','interrupted',cutoff-2,cutoff-1)]
+        with db() as c:
+            for ident,status,created,finished in rows:
+                c.execute('INSERT INTO jobs VALUES (?,?,?,?,?,?,?)',('retention-'+ident,'retention-test','updates',status,'Test',created,finished))
+        code,_=self.request('/api/jobs/delete',{'before':cutoff})
+        self.assertEqual(code,200)
+        with db() as c:remaining={r['id'] for r in c.execute("SELECT id FROM jobs WHERE resource='retention-test'")}
+        self.assertEqual(remaining,{'retention-boundary','retention-newer','retention-running','retention-queued'})
+        for value in (None,True,'bad','NaN',float('inf'),time.time()+3600):
+            self.assertEqual(self.request('/api/jobs/delete',{'before':value})[0],400)
+        with db() as c:c.execute("DELETE FROM jobs WHERE resource='retention-test'")
+
+    def test_delete_backup_group_protects_pending_restore(self):
+        group='abcd'*6
+        root=server.DATA/'backups'/group;root.mkdir(parents=True,exist_ok=True)
+        (root/'site.jpa').write_bytes(b'archive');(root/'site.j01').write_bytes(b'part')
+        with db() as c:
+            c.execute('INSERT INTO projects (slug,cms,php,status,restore,backup_group) VALUES (?,?,?,?,?,?)',('delete-backup-guard','auto','8.4','error',1,group))
+        route='/api/backups/'+group+'/delete'
+        self.assertEqual(self.request(route)[0],400);self.assertTrue((root/'site.jpa').exists())
+        with db() as c:c.execute("UPDATE projects SET restore=0 WHERE slug='delete-backup-guard'")
+        self.assertEqual(self.request(route)[0],200);self.assertFalse(root.exists())
+        self.assertEqual(self.request(route)[0],400)
+        with db() as c:c.execute("DELETE FROM projects WHERE slug='delete-backup-guard'")
+
+    def test_delete_export_checks_filename_and_running_snapshots(self):
+        root=server.DATA/'exports';root.mkdir(exist_ok=True)
+        file=root/'deletion-test.zip';file.write_bytes(b'archive')
+        with db() as c:
+            # Other fixtures may contain intentionally queued jobs.
+            c.execute("UPDATE jobs SET status='done' WHERE status IN ('running','queued')")
+            c.execute('INSERT INTO jobs VALUES (?,?,?,?,?,?,?)',('export-delete-guard','demo','snapshot','running','Test',100,None))
+        self.assertEqual(self.request('/api/exports/delete',{'name':file.name})[0],400)
+        self.assertTrue(file.exists())
+        with db() as c:c.execute("DELETE FROM jobs WHERE id='export-delete-guard'")
+        self.assertEqual(self.request('/api/exports/delete',{'name':'../outside.zip'})[0],400)
+        self.assertEqual(self.request('/api/exports/delete',{'name':file.name})[0],200)
+        self.assertFalse(file.exists())
+
+
+class LibraryApiTests(unittest.TestCase):
+    request=ApiTests.request
+
+    def test_simple_upload_archive_download_and_delete(self):
+        content=io.BytesIO()
+        with zipfile.ZipFile(content,'w') as z:z.writestr('api-library/api-library.php','<?php /*\nPlugin Name: API Library\nVersion: 1.0.0\nUpdate URI: https://premium.example/api-library\n*/')
+        code,result=self.request('/api/uploads/extensions',raw=content.getvalue(),filename='library.zip')
+        self.assertEqual(code,201);self.assertEqual(result['cms'],'wordpress')
+        ident=result['id'];source=result['source']
+        self.assertEqual(self.request('/api/extension-packages/'+ident,get=True)[0],200)
+        self.assertEqual(self.request('/api/extension-sources/'+source+'/edit',{'name':'Renamed API Library','key':'global-test-key'})[0],200)
+        self.assertEqual(self.request('/api/extension-packages/'+ident+'/delete',custom=False)[0],403)
+        self.assertEqual(self.request('/api/extension-packages/'+ident+'/delete')[0],200)
+        _,listing=self.request('/api/extensions',get=True)
+        self.assertNotIn(ident,{x['id'] for x in listing['extensions']})
+        self.assertIn(source,{x['id'] for x in listing['sources']})
+        self.assertEqual(self.request('/api/extension-packages/'+ident,get=True)[0],400)
+
+    def test_project_candidate_endpoint_does_not_leak_download_credentials(self):
+        import extension_library
+        row={'key':'plugin:premium/premium.php','name':'Premium','cms':'wordpress','version':'1.0','latest':'2.0','kind':'plugin','element':'premium','can_download':True,'origin':'vendor.example','has_key':True,'license_key':'NEVER-PUBLIC','url':'https://vendor.example?key=NEVER-PUBLIC'}
+        with patch('extension_library.bridge',return_value=[row]):
+            code,result=self.request('/api/projects/demo/library',get=True)
+        self.assertEqual(code,200)
+        self.assertNotIn('NEVER-PUBLIC',json.dumps(result))
+
+
+class StorageAndNativeBackupApiTests(unittest.TestCase):
+    request=ApiTests.request
+
+    def test_storage_status_and_host_paths_are_available(self):
+        code,data=self.request('/api/storage',get=True)
+        self.assertEqual(code,200);self.assertEqual(len(data['areas']),5)
+        self.assertEqual({x['key'] for x in data['areas']},{'projects','extensions','packages','backups','exports'})
+        self.assertEqual(self.request('/api/storage/apply',{'paths':{}},custom=False)[0],403)
+
+    def test_storage_migration_blocks_new_actions(self):
+        with patch('storage_service.busy',return_value=True):
+            self.assertEqual(self.request('/api/jobs/delete',{'before':1})[0],400)
+            self.assertEqual(self.request('/api/uploads/backups/'+'e'*24,raw=b'archive',filename='site.jpa')[0],400)
+
+    def test_backup_metadata_is_never_exposed_as_an_archive_and_partial_groups_are_hidden(self):
+        import secrets
+        group=secrets.token_hex(12);root=server.DATA/'backups'/group;root.mkdir(parents=True)
+        (root/'site.jpa').write_bytes(b'JPA-native-test')
+        meta=root/'manager-backup.json';meta.write_text(json.dumps({'project':'demo','status':'creating','files':['site.jpa']}))
+        _,groups=self.request('/api/backups',get=True)
+        self.assertNotIn(group,{x['id'] for x in groups['backups']})
+        self.assertEqual(self.request('/api/backups/'+group+'/site.jpa',get=True)[0],400)
+        self.assertEqual(self.request('/api/backups/'+group+'/manager-backup.json',get=True)[0],400)
+        self.assertEqual(self.request('/api/backups/'+group+'/delete')[0],400)
+        meta.write_text(json.dumps({'project':'demo','status':'complete','files':['site.jpa']}))
+        self.assertEqual(self.request('/api/backups/'+group+'/site.jpa',get=True)[0],200)
+        self.assertEqual(self.request('/api/backup-bundles/'+group+'.zip',get=True)[0],200)
+        _,groups=self.request('/api/backups',get=True)
+        item=next(x for x in groups['backups'] if x['id']==group)
+        self.assertEqual(item['files'],['site.jpa'])
+
+    def test_storage_uses_worker_check_and_apply_handlers(self):
+        with patch('storage_service.check',return_value={'message':'checked'}) as check:
+            self.assertEqual(self.request('/api/storage/check',{'paths':{'projects':'/new'}})[0],200)
+            check.assert_called_once_with({'projects':'/new'})
+        with patch('storage_service.start',return_value={'job':'migration'}) as start:
+            self.assertEqual(self.request('/api/storage/apply',{'paths':{'projects':'/new'}})[0],202)
+            start.assert_called_once_with({'projects':'/new'})

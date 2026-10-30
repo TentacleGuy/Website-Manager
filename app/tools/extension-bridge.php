@@ -24,7 +24,7 @@ if (!function_exists('get_option')) {
     }
     if ($action === 'inventory') {
         $db->setQuery('SELECT extension_id,name,element,type AS kind,folder,enabled,protected,manifest_cache FROM #__extensions ORDER BY name');$rows=$db->loadAssocList();
-        $db->setQuery('SELECT extension_id,version FROM #__updates');$updates=[];foreach($db->loadAssocList() as $u)$updates[$u['extension_id']]=$u['version'];
+        $db->setQuery('SELECT extension_id,version FROM #__updates');$updates=[];foreach($db->loadAssocList() as $u){$id=$u['extension_id'];if(!isset($updates[$id]) || version_compare($u['version'],$updates[$id],'>'))$updates[$id]=$u['version'];}
         $items=[];
         foreach ($rows as $r) {
             $manifest=json_decode($r['manifest_cache'],true) ?: [];

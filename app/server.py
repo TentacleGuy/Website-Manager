@@ -117,6 +117,35 @@ class Handler(BaseHTTPRequestHandler):
         if not self.trusted_host(): return self.send(403,{'error':'Host nicht freigegeben.'})
         path=urlparse(self.path).path
         try:
+            if path=='/api/storage':
+                import storage_service
+                return self.send(200,storage_service.status())
+            akeeba_project=re.fullmatch(r'/api/projects/([a-z][a-z0-9-]{0,39})/akeeba-backups',path)
+            if akeeba_project:
+                import akeeba_service
+                return self.send(200,akeeba_service.listing(akeeba_project[1]))
+            bundle=re.fullmatch(r'/api/backup-bundles/([a-f0-9]{24})\.zip',path)
+            if bundle:
+                folder=DATA/'backups'/bundle[1]
+                info=json.loads((folder/'manager-backup.json').read_text())
+                if folder.is_symlink() or info.get('status')!='complete':raise ValueError('Backup ist noch nicht vollständig.')
+                files=info.get('files',[])
+                if not files or any(not re.fullmatch(r'[A-Za-z0-9_.-]+\.(jpa|jps|zip|j\d+|z\d+)',n,re.I) or not (folder/n).is_file() or (folder/n).is_symlink() for n in files):raise ValueError('Mindestens ein Archivteil fehlt.')
+                self.send_response(200);self.send_header('Content-Type','application/zip');self.send_header('Content-Disposition','attachment; filename="akeeba-'+bundle[1]+'.zip"');self.send_header('Connection','close');self.end_headers();self.close_connection=True
+                with zipfile.ZipFile(self.wfile,'w',zipfile.ZIP_STORED,allowZip64=True) as archive:
+                    for name in files:archive.write(folder/name,name)
+                return
+            backup_download=re.fullmatch(r'/api/backups/([a-f0-9]{24})/([A-Za-z0-9_.-]+)',path)
+            if backup_download:
+                group,name=backup_download.groups()
+                if not re.search(r'\.(jpa|jps|zip|j\d+|z\d+)$',name,re.I):raise ValueError('Ungültige Backup-Datei.')
+                folder=DATA/'backups'/group;file=folder/name
+                if folder.is_symlink() or file.is_symlink() or not file.is_file():raise ValueError('Backup-Datei nicht gefunden.')
+                metadata=folder/'manager-backup.json'
+                if metadata.exists() and json.loads(metadata.read_text()).get('status')!='complete':raise ValueError('Backup ist noch nicht vollständig.')
+                self.send_response(200);self.send_header('Content-Type','application/octet-stream');self.send_header('Content-Disposition','attachment; filename="'+name+'"');self.send_header('Content-Length',str(file.stat().st_size));self.end_headers()
+                with file.open('rb') as stream:shutil.copyfileobj(stream,self.wfile)
+                return
             if path=='/api/database-profiles':
                 from database_profiles import listing
                 return self.send(200,{'profiles':listing()})
@@ -131,20 +160,39 @@ class Handler(BaseHTTPRequestHandler):
                 with db() as c: releases=[dict(r) for r in c.execute('SELECT * FROM releases')]
                 return self.send(200,{'packages':[public(p) for p in records('packages')],'releases':releases})
             if path=='/api/jobs':
-                history=parse_qs(urlparse(self.path).query).get('history',[''])[0]=='1'
-                return self.send(200,{'jobs':records('jobs') if history else records('jobs')[:100]})
+                query=parse_qs(urlparse(self.path).query)
+                if query.get('history',[''])[0]=='1':
+                    import activity_service
+                    return self.send(200,activity_service.listing(query))
+                with db() as c:
+                    rows=c.execute("SELECT * FROM jobs WHERE status IN ('queued','running') OR id IN (SELECT id FROM jobs ORDER BY created DESC LIMIT 100) ORDER BY created DESC").fetchall()
+                return self.send(200,{'jobs':[dict(row) for row in rows]})
             if path=='/api/extensions':
                 with db() as c: assignments=[dict(r) for r in c.execute('SELECT * FROM project_extensions')]
                 with db() as c: plans=[dict(r) for r in c.execute('SELECT * FROM extension_plans')]
-                return self.send(200,{'extensions':[public(p) for p in records('extensions')],'licenses':extensions.licenses(),'assignments':assignments,'sources':extensions.sources(),'plans':plans,'providers':extensions.providers.listing()})
+                return self.send(200,{'extensions':[{**public(p),'size':(DATA/'extensions'/p['filename']).stat().st_size if (DATA/'extensions'/p['filename']).is_file() else 0} for p in records('extensions') if p.get('archived',1)],'licenses':extensions.licenses(),'assignments':assignments,'sources':extensions.sources(),'plans':plans,'providers':extensions.providers.listing()})
             if re.fullmatch(r'/api/projects/[a-z][a-z0-9-]{0,39}/extensions',path):
                 return self.send(200,{'installed':extensions.installed(path.split('/')[3])})
+            library_project=re.fullmatch(r'/api/projects/([a-z][a-z0-9-]{0,39})/library',path)
+            if library_project:
+                import extension_library
+                return self.send(200,{'items':extension_library.candidates(library_project[1])})
+            library_package=re.fullmatch(r'/api/extension-packages/([a-f0-9]{24})',path)
+            if library_package:
+                import extension_library
+                row,file=extension_library.package_file(library_package[1])
+                self.send_response(200);self.send_header('Content-Type','application/zip');self.send_header('Content-Length',str(file.stat().st_size));self.send_header('Content-Disposition','attachment; filename="'+row['id']+'.zip"');self.end_headers()
+                with file.open('rb') as stream:shutil.copyfileobj(stream,self.wfile)
+                return
             if path=='/api/backups':
                 groups=[]
                 root=DATA/'backups'
                 if root.exists():
                     for folder in root.iterdir():
-                        if folder.is_dir(): groups.append({'id':folder.name,'files':[p.name for p in folder.iterdir() if p.is_file() and not p.name.endswith('.partial')]})
+                        if folder.is_dir() and not folder.is_symlink() and re.fullmatch(r'[a-f0-9]{24}',folder.name):
+                            meta=folder/'manager-backup.json'
+                            if meta.exists() and json.loads(meta.read_text()).get('status')!='complete':continue
+                            groups.append({'id':folder.name,'files':[p.name for p in folder.iterdir() if p.is_file() and not p.is_symlink() and re.search(r'\.(jpa|jps|zip|j\d+|z\d+)$',p.name,re.I)]})
                 return self.send(200,{'backups':groups})
             if path=='/api/exports':
                 root=DATA/'exports'
@@ -205,16 +253,8 @@ class Handler(BaseHTTPRequestHandler):
                 ident=register(file,query.get('cms',[''])[0],query.get('version',[''])[0],'manual')
                 return self.send(201,{'id':ident})
             if path=='/api/uploads/extensions':
-                source_id=query.get('source',[''])[0]
-                if source_id:
-                    source=extensions.source(source_id)
-                else:
-                    detected=extensions.inspect_upload(file);provider=query.get('provider',['custom'])[0]
-                    source_id=extensions.save_source({**detected,'provider':provider})
-                    source=extensions.source(source_id)
-                requested=query.get('version',[''])[0] or extensions.package_version(file,source['cms'])
-                ident=extensions.register_package(file,source,version(requested))
-                return self.send(201,{'id':ident,'source':source_id})
+                import extension_library
+                return self.send(201,extension_library.upload(file))
             if path=='/api/uploads/kickstart':
                 if name.lower()!='kickstart.php' or file.stat().st_size>20*1024*1024: raise ValueError('Offizielle kickstart.php auswählen (max. 20 MB).')
                 if b'<?php' not in file.read_bytes()[:2048]: raise ValueError('Keine PHP-Datei.')
@@ -239,12 +279,45 @@ class Handler(BaseHTTPRequestHandler):
             length=int(self.headers.get('Content-Length','0'))
             if length<0: raise ValueError('Ungültige Anfragegröße.')
             path=urlparse(self.path).path
+            import storage_service
+            if storage_service.busy():raise ValueError('Die Speicherorte werden gerade umgestellt. Bitte den Abschluss abwarten.')
             if path.startswith('/api/uploads/'):
                 if length>MAX_UPLOAD: return self.send(413,{'error':'Datei zu groß (max. 4 GB pro Teil).'})
-                return self.upload(path,length)
+                with LOCK:
+                    if storage_service.busy():raise ValueError('Speicherorte werden gerade umgestellt.')
+                    storage_service.ACTIVE_UPLOADS+=1
+                try:return self.upload(path,length)
+                finally:
+                    with LOCK:storage_service.ACTIVE_UPLOADS-=1
             if length>16384: return self.send(413,{'error':'Anfrage zu groß.'})
             body=json.loads(self.rfile.read(length) or '{}')
             if not isinstance(body,dict): raise ValueError('JSON-Objekt erwartet.')
+            if path=='/api/storage/check':return self.send(200,storage_service.check(body.get('paths')))
+            if path=='/api/storage/apply':return self.send(202,storage_service.start(body.get('paths')))
+            if path=='/api/jobs/delete':
+                import activity_service
+                return self.send(200,activity_service.delete_before(body.get('before')))
+            if re.fullmatch(r'/api/backups/[a-f0-9]{24}/delete',path):
+                group=path.split('/')[3]
+                with LOCK, db() as c:
+                    if c.execute('SELECT 1 FROM projects WHERE backup_group=? AND restore=1',(group,)).fetchone():
+                        raise ValueError('Dieses Backup wird für eine laufende oder fortsetzbare Wiederherstellung benötigt.')
+                    folder=DATA/'backups'/group
+                    if folder.is_symlink() or not folder.is_dir():raise ValueError('Backup nicht gefunden.')
+                    meta=folder/'manager-backup.json'
+                    if meta.exists() and json.loads(meta.read_text()).get('status')=='creating':raise ValueError('Die Sicherung wird noch erstellt.')
+                    shutil.rmtree(folder)
+                return self.send(200,{'message':'Backup einschließlich aller Teilarchive gelöscht.'})
+            if path=='/api/exports/delete':
+                name=body.get('name','')
+                if not isinstance(name,str) or not re.fullmatch(r'[a-z0-9-]+\.zip',name):raise ValueError('Ungültiger Dateiname.')
+                with LOCK, db() as c:
+                    if c.execute("SELECT 1 FROM jobs WHERE status IN ('queued','running') AND kind IN ('snapshot','update-all','install-extension','extensions')").fetchone():
+                        raise ValueError('Bitte die laufende Sicherung oder Erweiterungsinstallation abwarten.')
+                    file=DATA/'exports'/name
+                    if file.is_symlink() or not file.is_file():raise ValueError('Sicherung nicht gefunden.')
+                    file.unlink()
+                return self.send(200,{'message':'Projektsicherung gelöscht.'})
             if path.startswith('/api/runtimes/'):
                 from shared_operations import runtime_transition
                 version=path.split('/')[-1];ports(version);action=body.get('action')
@@ -266,12 +339,13 @@ class Handler(BaseHTTPRequestHandler):
                 import update_service
                 return self.send(202,{'job':job('manager-update','manager-install',lambda:update_service.install(body.get('version')))})
             if path=='/api/projects':
-                name=create_project(body)
-                if body.get('backup_id'):
-                    ident=job(name,'akeeba',lambda:restore_akeeba(name,body['backup_id'],body.get('archive',''),body.get('password','')))
-                    return self.send(202,{'slug':name,'job':ident})
-                if body.get('admin') or body.get('prepare'):return self.send(202,{'slug':name,'job':job(name,'provision',lambda:projects_service.provision(name,body.get('admin')))})
-                return self.send(201,{'slug':name})
+                with LOCK:
+                    name=create_project(body)
+                    if body.get('backup_id'):
+                        ident=job(name,'akeeba',lambda:restore_akeeba(name,body['backup_id'],body.get('archive',''),body.get('password','')))
+                        return self.send(202,{'slug':name,'job':ident})
+                    if body.get('admin') or body.get('prepare'):return self.send(202,{'slug':name,'job':job(name,'provision',lambda:projects_service.provision(name,body.get('admin')))})
+                    return self.send(201,{'slug':name})
             if path=='/api/catalog/sync':
                 cms=valid_cms(body.get('cms'));return self.send(202,{'job':job('catalog-'+cms,'catalog',lambda:sync(cms))})
             if path=='/api/packages/download':
@@ -279,6 +353,21 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(202,{'job':job('package-'+cms+'-'+v,'download',lambda:download(cms,v))})
             if path=='/api/providers':return self.send(201,{'id':extensions.providers.save(body)})
             if path in ('/api/licenses','/api/extension-sources') and body.get('provider') not in {p['id'] for p in extensions.providers.listing()}:raise ValueError('Anbieter zuerst über „Anbieter hinzufügen“ anlegen.')
+            library_action=re.fullmatch(r'/api/extension-(sources|packages)/([a-f0-9]{24})/(edit|delete)',path)
+            if library_action:
+                import extension_library
+                group,ident,action=library_action.groups()
+                if group=='sources' and action=='edit':return self.send(200,extension_library.edit(ident,body))
+                if group=='packages' and action=='delete':return self.send(200,extension_library.delete_package(ident))
+                raise ValueError('Ungültige Bibliotheksaktion.')
+            library_project=re.fullmatch(r'/api/projects/([a-z][a-z0-9-]{0,39})/(library-import|extension-key)',path)
+            if library_project:
+                import extension_library
+                name,action=library_project.groups()
+                if action=='extension-key':return self.send(200,extension_library.project_key(name,body.get('source'),body))
+                key=body.get('key')
+                if not isinstance(key,str) or len(key)>500:raise ValueError('Erweiterung auswählen.')
+                return self.send(202,{'job':job(name,'library-import',lambda:extension_library.import_project(name,key,body.get('download',True)))})
             if path=='/api/licenses':return self.send(201,{'id':extensions.save_license(body)})
             if path=='/api/extension-sources':return self.send(201,{'id':extensions.save_source(body)})
             source_action=re.fullmatch(r'/api/extension-sources/([a-f0-9]{24})/(check|download)',path)
@@ -318,6 +407,9 @@ class Handler(BaseHTTPRequestHandler):
                     choice=body.get('kickstart',p.get('kickstart','auto'))
                     with db() as c:c.execute('UPDATE projects SET kickstart=? WHERE slug=?',(choice,name))
                     return self.send(202,{'job':job(name,'akeeba',lambda:restore_akeeba(name,group,archive,password))})
+                if action=='akeeba-backup':
+                    import akeeba_service
+                    return self.send(202,{'job':job(name,action,lambda:akeeba_service.create(name,body.get('profile',1)))})
                 if action=='snapshot': return self.send(202,{'job':job(name,action,lambda:snapshot(name))})
                 if action=='finalize': return self.send(202,{'job':job(name,action,lambda:finalize_restore(name))})
                 if action=='update-extension':

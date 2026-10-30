@@ -10,9 +10,15 @@ services:
     environment:
       VMM_LISTEN: 0.0.0.0
       VMM_DATA: /data
+      VMM_RUNTIME_PROJECT: ${VMM_RUNTIME_PROJECT:-vmm-runtime}
       VMM_HOST_DATA: ${VMM_HOST_DATA:?Set absolute VMM_HOST_DATA in .env}
     volumes:
       - ./data:/data
+      - ${VMM_PROJECTS_PATH:-./data/projects}:/data/projects
+      - ${VMM_EXTENSIONS_PATH:-./data/extensions}:/data/extensions
+      - ${VMM_PACKAGES_PATH:-./data/packages}:/data/packages
+      - ${VMM_BACKUPS_PATH:-./data/backups}:/data/backups
+      - ${VMM_EXPORTS_PATH:-./data/exports}:/data/exports
       - ${VMM_DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
     networks:
       - gateway

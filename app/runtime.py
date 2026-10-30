@@ -29,7 +29,8 @@ def compose(project,host_data):
         return result
     name=slug(project['slug']); ports(project['php'])
     host_data=host_path(host_data)
-    root=host_data+'/projects/'+name
+    from storage_paths import host_location
+    root=host_location('projects',host_data)+'/'+name
     services={
         'db':{'image':'mariadb:10.11','environment':{'MARIADB_DATABASE':'website','MARIADB_USER':'website','MARIADB_PASSWORD':project['db_password'],'MARIADB_ROOT_PASSWORD':project['db_root_password']},'volumes':['database:/var/lib/mysql'], 'healthcheck':{'test':['CMD','healthcheck.sh','--connect','--innodb_initialized'],'interval':'5s','timeout':'5s','retries':30}}
     }
@@ -48,7 +49,8 @@ def compose(project,host_data):
             'depends_on':{'db':{'condition':'service_healthy'}},'volumes':[
                 {'type':'bind','source':root+'/site','target':'/var/www/html'},
                 {'type':'bind','source':root+'/tools','target':'/vmm-tools','read_only':True},
-                {'type':'bind','source':host_data+'/extensions','target':'/vmm-extensions','read_only':True}],
+                {'type':'bind','source':host_location('extensions',host_data),'target':'/vmm-extensions','read_only':True},
+                {'type':'bind','source':host_location('backups',host_data),'target':'/vmm-backups'}],
             'environment':{'VMM_PROJECT':name,'VMM_DB_PASSWORD':project['db_password']},
             'networks':['default','gateway'],'labels':labels}
     services['phpmyadmin']=database_admin(project)

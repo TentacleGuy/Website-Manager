@@ -168,7 +168,7 @@ def pending_requirements(p):
             source=extensions.source(plan['source'])
             declared=source.get('requirements',{})
             if declared:result.append(clean(declared,source['name']))
-            packages=[dict(r) for r in connection.execute('SELECT * FROM extensions WHERE source_id=?',(plan['source'],))]
+            packages=[dict(r) for r in connection.execute('SELECT * FROM extensions WHERE source_id=? AND archived=1',(plan['source'],))]
             packages=[r for r in packages if plan['version']=='latest' or r['version']==plan['version']]
             if packages:
                 package=max(packages,key=lambda r:extensions.version_key(r['version']));file=DATA/'extensions'/package['filename']

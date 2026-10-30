@@ -29,6 +29,8 @@ def apply(root,ident):
     compose=['docker','compose','-p',project,'-f',str(root/'compose.yaml')]
     override=stage/'compose.update.json'
     override.write_text(json.dumps({'services':{'manager':{'volumes':[host_data+':/data',docker_socket+':/var/run/docker.sock']}}}))
+    storage_override=root/'data/storage/compose.storage.json'
+    if storage_override.exists():compose+=['-f',str(storage_override)]
     compose+=['-f',str(override)]
     changed=[];stopped=False
     report('running','Manager wird aktualisiert. Projekte bleiben erhalten.')
