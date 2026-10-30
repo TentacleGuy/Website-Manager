@@ -64,15 +64,25 @@ def create(name,profile=1):
     stage=root/ident;stage.mkdir()
     metadata=stage/'manager-backup.json'
     metadata.write_text(json.dumps({'project':name,'created':int(time.time()),'profile':profile,'status':'creating','files':[]}))
-    prefix=op.folder(p)/'tools/akeeba-local.php'
-    prefix.write_text("<?php\n// Local backup: prevent Akeeba's optional administrator emails.\nif(!defined('AKEEBA_BACKUP_ORIGIN'))define('AKEEBA_BACKUP_ORIGIN','backend');\n")
-    output='/vmm-backups/'+ident
-    overrides={'akeeba.basic.output_directory':output,'akeeba.basic.archive_name':filename,'akeeba.basic.backup_type':'full','akeeba.advanced.archiver_engine':'jpa','akeeba.advanced.postproc_engine':'none','akeeba.quota.enable_count_quota':'0','akeeba.quota.enable_size_quota':'0','akeeba.quota.maxage.enable':'0','akeeba.quota.remotely.enable_count_quota':'0','akeeba.quota.remotely.enable_size_quota':'0','akeeba.quota.remotely.maxage.enable':'0','akeeba.quota.obsolete_quota':'0','akeeba.quota.enable_logfiles':'0'}
-    params='--overrides='+','.join(k+'='+v for k,v in overrides.items())
-    if p['cms']=='joomla':base=['php','-d','auto_prepend_file=/vmm-tools/akeeba-local.php','cli/joomla.php'];take=['akeeba:backup:take'];query=['akeeba:backup:list']
-    else:base=['php','-d','auto_prepend_file=/vmm-tools/akeeba-local.php','/usr/local/bin/wp','--allow-root'];take=['akeeba','backup','take'];query=['akeeba','backup','list']
     try:
+        tools=op.folder(p)/'tools'
+        from project_files import archive_mapping,SERVER_FILES
+        mapping,required=archive_mapping(op.folder(p)/'site',tools)
+        report=tools/'akeeba-originals-report.json'
+        report.unlink(missing_ok=True)
+        (tools/'akeeba-originals.json').write_text(json.dumps(mapping))
+        shutil.copyfile(Path(__file__).parent/'tools/akeeba-originals-archiver.php',tools/'akeeba-originals-archiver.php')
+        shutil.copyfile(Path(__file__).parent/'tools/akeeba-local.php',tools/'akeeba-local.php')
+        output='/vmm-backups/'+ident
+        overrides={'akeeba.basic.output_directory':output,'akeeba.basic.archive_name':filename,'akeeba.basic.backup_type':'full','akeeba.advanced.archiver_engine':'vmmjpa' if mapping else 'jpa','akeeba.advanced.postproc_engine':'none','akeeba.quota.enable_count_quota':'0','akeeba.quota.enable_size_quota':'0','akeeba.quota.maxage.enable':'0','akeeba.quota.remotely.enable_count_quota':'0','akeeba.quota.remotely.enable_size_quota':'0','akeeba.quota.remotely.maxage.enable':'0','akeeba.quota.obsolete_quota':'0','akeeba.quota.enable_logfiles':'0'}
+        params='--overrides='+','.join(k+'='+v for k,v in overrides.items())
+        if p['cms']=='joomla':base=['php','-d','auto_prepend_file=/vmm-tools/akeeba-local.php','cli/joomla.php'];take=['akeeba:backup:take'];query=['akeeba:backup:list']
+        else:base=['php','-d','auto_prepend_file=/vmm-tools/akeeba-local.php','/usr/local/bin/wp','--allow-root'];take=['akeeba','backup','take'];query=['akeeba','backup','list']
         op.exec_php(p,base+take+['--profile='+str(profile),'--description='+description,params],timeout=7200,allowed_returncodes=(0,2))
+        if required:
+            try:seen=json.loads(report.read_text())
+            except (OSError,ValueError):seen={}
+            if any(not seen.get(name) for name in required):raise ValueError('Akeeba hat nicht alle ursprünglichen Serverdateien gesichert. Bitte Datei-Ausschlüsse im Profil prüfen. Das Archiv wird nicht als vollständig angeboten.')
         rows=json_records(op.exec_php(p,base+query+['--description='+description,'--format=json'],timeout=120))
         record=next((r for r in rows if r.get('description')==description and r.get('status')=='complete'),None)
         if not record:raise ValueError('Akeeba hat die Sicherung nicht als vollständig abgeschlossen bestätigt. Dateien bleiben als unvollständige Sicherung zur Diagnose erhalten.')
@@ -83,7 +93,7 @@ def create(name,profile=1):
         if any(not (stage/file).is_file() or (stage/file).is_symlink() or (stage/file).stat().st_size==0 for file in names):raise ValueError('Akeeba-Sicherung ist unvollständig: Mindestens ein Archivteil fehlt.')
         with main.open('rb') as stream:
             if stream.read(3)!=b'JPA':raise ValueError('Akeeba hat kein gültiges JPA-Hauptarchiv erzeugt.')
-        info={'project':name,'created':int(time.time()),'profile':profile,'status':'complete','files':names,'native_id':str(record.get('id','')),'sha256':{file:op.digest(stage/file) for file in names}}
+        info={'project':name,'created':int(time.time()),'profile':profile,'status':'complete','files':names,'restored_server_files':[name for name in SERVER_FILES if name in required],'native_id':str(record.get('id','')),'sha256':{file:op.digest(stage/file) for file in names}}
         metadata.write_text(json.dumps(info))
     except Exception:
         metadata.write_text(json.dumps({'project':name,'created':int(time.time()),'profile':profile,'status':'error','files':[]}))

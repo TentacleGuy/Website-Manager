@@ -166,8 +166,8 @@ def snapshot(p):
             root=DATA/'exports';root.mkdir(exist_ok=True);target=root/(p['slug']+'-'+str(int(time.time()))+'-'+secrets.token_hex(3)+'.zip');temp=target.with_suffix('.partial')
             with zipfile.ZipFile(temp,'w',zipfile.ZIP_DEFLATED) as z:
                 z.writestr('database.sql',dump);z.writestr('project.json',json.dumps({k:p[k] for k in ('slug','cms','php','version')}))
-                for file in (op.folder(p)/'site').rglob('*'):
-                    if file.is_file() and not file.is_symlink():z.write(file,'site/'+str(file.relative_to(op.folder(p)/'site')))
+                from project_files import archive_entries
+                for file,stored_name in archive_entries(op.folder(p)/'site',op.folder(p)/'tools'):z.write(file,'site/'+stored_name)
             temp.chmod(0o600);temp.rename(target);return 'Sicherung erstellt: '+target.name
         finally:
             if paused:op.command(args+['unpause']+php)

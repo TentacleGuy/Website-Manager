@@ -198,8 +198,8 @@ def snapshot(name):
         with zipfile.ZipFile(temp,'w',zipfile.ZIP_DEFLATED) as z:
             z.writestr('database.sql',dump)
             z.writestr('project.json',json.dumps({k:p[k] for k in ('slug','cms','php','version')},indent=2))
-            for path in (folder(p)/'site').rglob('*'):
-                if path.is_file() and not path.is_symlink(): z.write(path,'site/'+str(path.relative_to(folder(p)/'site')))
+            from project_files import archive_entries
+            for path,stored_name in archive_entries(folder(p)/'site',folder(p)/'tools'):z.write(path,'site/'+stored_name)
         temp.rename(target)
         return 'Sicherung erstellt: '+target.name
     finally:
@@ -290,9 +290,8 @@ def restore_akeeba(name,backup_id,archive,password=''):
             '--mount','type=bind,source='+host+'/tools/'+kickstart.relative_to(DATA/'tools').as_posix()+',target=/vmm-kickstart/kickstart.php,readonly',
             '-i','vmm-php:'+p['php'],'php','/vmm-tools/extract.php'],input=json.dumps({'archive':archive,'password':password}).encode(),timeout=1800)
         if not (site/'installation'/'index.php').exists(): raise ValueError('Das Archiv enthält keinen unterstützten Akeeba-Wiederherstellungsassistenten.')
-        for filename in ('.htaccess','.user.ini','php.ini'):
-            original=site/filename
-            if original.exists(): original.rename(site/(filename+'.vmm-original'))
+        from project_files import prepare_local
+        prepare_local(site,folder(p)/'tools')
         for directory, dirs, files in os.walk(site):
             for entry in dirs:
                 if (Path(directory)/entry).is_symlink():raise ValueError('Backup enthält symbolische Verknüpfungen. Bitte als reguläre Dateien sichern.')

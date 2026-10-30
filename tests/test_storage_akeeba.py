@@ -125,6 +125,35 @@ class AkeebaCreationTests(unittest.TestCase):
         info=json.loads((akeeba.DATA/'backups'/ident/'manager-backup.json').read_text())
         self.assertEqual(info['status'],'complete');self.assertEqual(len(info['files']),2);self.assertEqual(len(info['sha256']),2)
 
+    def test_native_backup_requires_verified_original_server_files(self):
+        from project_files import prepare_local
+        name=self.setup_project('akeeba-originals-evidence');ident=secrets.token_hex(12)
+        site=akeeba.DATA/'projects'/name/'site';site.mkdir(parents=True,exist_ok=True)
+        (site/'.htaccess').write_text('production');(site/'htaccess.txt').write_text('local')
+        tools=site.parent/'tools';prepare_local(site,tools)
+        with patch('akeeba_service.capability',return_value={'available':True}),patch('akeeba_service.secrets.token_hex',return_value=ident),patch('operations.write_tools'),patch('operations.exec_php',return_value=b'Backup complete'):
+            with self.assertRaisesRegex(ValueError,'ursprünglichen Serverdateien'):akeeba.create(name)
+        self.assertEqual(json.loads((akeeba.DATA/'backups'/ident/'manager-backup.json').read_text())['status'],'error')
+        self.assertEqual((site/'.htaccess').read_text(),'local');self.assertEqual((site/'.htaccess.vmm-original').read_text(),'production')
+
+    def test_native_backup_records_original_configuration_without_live_renames(self):
+        from project_files import prepare_local
+        name=self.setup_project('akeeba-originals-success');ident=secrets.token_hex(12)
+        site=akeeba.DATA/'projects'/name/'site';site.mkdir(parents=True,exist_ok=True)
+        (site/'.htaccess').write_text('production');(site/'htaccess.txt').write_text('local')
+        tools=site.parent/'tools';prepare_local(site,tools)
+        def execute(p,args,**kwargs):
+            if 'akeeba:backup:take' in args:
+                self.assertEqual((site/'.htaccess').read_text(),'local')
+                self.assertTrue(any('akeeba.advanced.archiver_engine=vmmjpa' in arg for arg in args))
+                (tools/'akeeba-originals-report.json').write_text(json.dumps({'.htaccess':True,'htaccess.txt':True}))
+                (akeeba.DATA/'backups'/ident/('vmm-'+name+'-'+ident+'.jpa')).write_bytes(b'JPA-fixture')
+                return b'done'
+            return json.dumps([{'description':'VMM-'+ident,'status':'complete','id':1}]).encode()
+        with patch('akeeba_service.capability',return_value={'available':True}),patch('akeeba_service.secrets.token_hex',return_value=ident),patch('operations.write_tools'),patch('operations.exec_php',side_effect=execute):akeeba.create(name)
+        self.assertEqual((site/'.htaccess').read_text(),'local')
+        self.assertEqual(json.loads((akeeba.DATA/'backups'/ident/'manager-backup.json').read_text())['restored_server_files'],['.htaccess'])
+
     def test_failed_native_backup_is_not_listed_as_complete(self):
         name=self.setup_project('akeeba-native-fail');ident=secrets.token_hex(12)
         with patch('akeeba_service.capability',return_value={'available':True}),patch('akeeba_service.secrets.token_hex',return_value=ident),patch('operations.write_tools',side_effect=lambda p:(akeeba.DATA/'projects'/name/'tools').mkdir(parents=True,exist_ok=True)),patch('operations.exec_php',return_value=b'[]'):
