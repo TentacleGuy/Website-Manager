@@ -19,6 +19,7 @@ from operations import transition, snapshot, restore_akeeba, finalize_restore, i
 
 import extension_service as extensions
 import project_service as projects_service
+import desktop_service
 
 from credentials import listing as credential_list, change as credential_change
 
@@ -117,6 +118,13 @@ class Handler(BaseHTTPRequestHandler):
         if not self.trusted_host(): return self.send(403,{'error':'Host nicht freigegeben.'})
         path=urlparse(self.path).path
         try:
+            project_folder=re.fullmatch(r'/api/projects/([a-z][a-z0-9-]{0,39})/folder',path)
+            if project_folder:
+                value=desktop_service.folder(project_folder[1])
+                if parse_qs(urlparse(self.path).query).get('format')==['path']:
+                    if not value['available']:raise ValueError(value['reason'])
+                    content=value['path'].encode('utf-8');self.send_response(200);self.send_header('Content-Type','text/plain; charset=utf-8');self.send_header('Content-Length',str(len(content)));self.send_header('Cache-Control','no-store');self.end_headers();self.wfile.write(content);return
+                return self.send(200,value)
             if path=='/api/storage':
                 import storage_service
                 return self.send(200,storage_service.status())
@@ -153,7 +161,7 @@ class Handler(BaseHTTPRequestHandler):
                 import environment_service
                 from database_profiles import profile,listing
                 return self.send(200,{**environment_service.saved_report(DATA),'existing_database':profile({'database_profile':'existing'}),'database_profiles':listing()})
-            if path=='/api/projects': return self.send(200,{'projects':[{**public(p),**project_links(dict(p),DATA/'projects'/p['slug']),'extension_status':extensions.inventory_summary(p['slug'])} for p in records('projects')],'php':PHP})
+            if path=='/api/projects': return self.send(200,{'projects':[{**public(p),**project_links(dict(p),DATA/'projects'/p['slug']),'extension_status':extensions.inventory_summary(p['slug']),'folder':desktop_service.folder(p)} for p in records('projects')],'php':PHP})
             if re.fullmatch(r'/api/projects/[a-z][a-z0-9-]{0,39}/credentials',path):
                 return self.send(200,{'credentials':credential_list(slug(path.split('/')[3]))})
             if path=='/api/packages':

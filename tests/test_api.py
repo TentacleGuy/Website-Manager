@@ -41,6 +41,16 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(result[0],200)
         self.assertNotIn('db_password',json.dumps(result[1]))
 
+    def test_project_folder_endpoint_uses_host_storage_and_rejects_missing_projects(self):
+        server.create_project({'slug':'folder-endpoint','cms':'wordpress','php':'8.4','package_id':fixture()})
+        (server.DATA/'projects/folder-endpoint/site').mkdir(parents=True,exist_ok=True)
+        with patch.dict(os.environ,{'VMM_HOST_DATA':'C:/Users/Test Person/WebsiteManager/data'}):
+            code,value=self.request('/api/projects/folder-endpoint/folder',get=True)
+        self.assertEqual(code,200);self.assertTrue(value['available'])
+        self.assertEqual(value['path'],'C:\\Users\\Test Person\\WebsiteManager\\data\\projects\\folder-endpoint\\site')
+        self.assertEqual(self.request('/api/projects/no-such-project/folder',get=True)[0],400)
+        self.assertEqual(self.request('/api/projects/folder-endpoint/folder',get=True,host='attacker.example')[0],403)
+
     def test_reject_cross_origin_and_dns_rebinding(self):
         self.assertEqual(self.request('/api/projects',custom=False)[0],403)
         self.assertEqual(self.request('/api/projects',host='attacker.example:8090')[0],403)

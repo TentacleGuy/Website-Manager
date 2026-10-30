@@ -177,3 +177,11 @@ php -l app/tools/restore-backup.php
 Python-Standardbibliothek mit HTTP-API und SQLite; Browseroberfläche in JavaScript und CSS. Gemeinsam genutzte MariaDB sowie PHP-/Apache-Laufzeiten werden über Compose gesteuert. PHP-Unterstützung und Erweiterungen sind in `infra/runtime/Dockerfile` definiert.
 
 `data/` enthält Manager-Metadaten, Projektdateien, Paketarchive und Schlüssel. Die Datenbankinhalte liegen im Docker-Volume `vmm-runtime_database`. Ein Kopieren des Quellcodes oder von `data/` allein überträgt dieses Volume nicht. Für einen Umzug sind zusätzlich SQL-Exporte bzw. vollständige Backups nötig. `docker compose down -v` entfernt Datenbankvolumes und gehört nicht zum normalen Aktualisieren.
+
+## Projektordner im Dateimanager öffnen
+
+**Dateipfad öffnen** steht in der Projektliste und der Projektübersicht. Es öffnet den Website-Ordner (`site`) im Explorer, Finder beziehungsweise Linux-Dateimanager und berücksichtigt die konfigurierten Speicherorte. Der Pfad kann zusätzlich kopiert werden.
+
+Die lokale Startdatei des Managers richtet dafür beim nächsten Start die Desktop-Anbindung `tentacle-project://` für den aktuellen Benutzer ein. Bei einer bestehenden Installation nach Übernahme der neuen Programmdateien einmal `Starten.ps1` (Windows), `Starten.command` (macOS) oder `Starten.sh` (Linux) ausführen. Linux benötigt eine Desktop-Sitzung mit `curl` und den XDG-Werkzeugen. Beim reinen Docker-/Quellcodebetrieb kann unter macOS/Linux `bash app/installer_assets/register-folders.sh "$PWD"` ausgeführt werden; unter Windows die Funktion `Register-ProjectFolders` aus `Gemeinsam.ps1` verwenden.
+
+Der Browser kann beim ersten Öffnen nach einer Bestätigung fragen. Die Anbindung nimmt ausschließlich Projektnamen entgegen und ermittelt den vorhandenen Ordner über den lokalen Manager; sie akzeptiert keine beliebigen Pfade oder Befehle. Bei Zugriff von einem anderen Rechner wird nur der Pfad angezeigt. Ältere Projekte in Docker-Volumes müssen zuvor auf gemeinsame Laufzeiten umgestellt werden.

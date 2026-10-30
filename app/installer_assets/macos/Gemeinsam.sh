@@ -80,6 +80,7 @@ wait_docker() {
 
 start_manager() {
     cd "$INSTALL_DIR"
+    /bin/bash "$INSTALL_DIR/app/installer_assets/register-folders.sh" "$INSTALL_DIR" || printf '%s\n' 'Projektordner-Anbindung konnte nicht eingerichtet werden.' >&2
     source "$INSTALL_DIR/app/installer_assets/docker-environment.sh"
     manager_environment "$INSTALL_DIR"
     local actual

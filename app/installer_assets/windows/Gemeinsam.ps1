@@ -41,9 +41,24 @@ function Wait-Docker {
     Invoke-Docker compose version
 }
 
+function Register-ProjectFolders {
+    $helper = Join-Path $PSScriptRoot 'app\installer_assets\windows\Projektordner.ps1'
+    if (-not (Test-Path -LiteralPath $helper)) { throw 'Projektordner-Helfer fehlt.' }
+    $key = 'HKCU:\Software\Classes\tentacle-project'
+    New-Item -Path "$key\shell\open\command" -Force | Out-Null
+    Set-Item -LiteralPath $key -Value 'URL:Tentacle Projektordner'
+    New-ItemProperty -LiteralPath $key -Name 'URL Protocol' -Value '' -PropertyType String -Force | Out-Null
+    $powershell = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
+    $command = '"' + $powershell + '" -NoLogo -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "' + $helper + '" -ProjectUrl "%1"'
+    Set-Item -LiteralPath "$key\shell\open\command" -Value $command
+    New-Item -ItemType Directory -Path "$PSScriptRoot\data" -Force | Out-Null
+    [IO.File]::WriteAllText((Join-Path $PSScriptRoot 'data\desktop-integration.json'),'{"platform":"windows","scheme":"tentacle-project","version":1}',(New-Object Text.UTF8Encoding $false))
+}
+
 function Start-Manager {
     param([switch]$ForceBuild)
     Set-Location $PSScriptRoot
+    try { Register-ProjectFolders } catch { Write-Warning ('Projektordner-Anbindung: ' + $_.Exception.Message) }
     Initialize-ManagerEnvironment $PSScriptRoot
     $actual = ''
     try { $actual = Invoke-Docker image inspect vmm-manager:dev --format '{{index .Config.Labels "vmm.docker.cli.image"}}' } catch {}
