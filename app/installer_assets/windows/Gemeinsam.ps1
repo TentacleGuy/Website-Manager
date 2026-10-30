@@ -42,11 +42,12 @@ function Wait-Docker {
 }
 
 function Start-Manager {
+    param([switch]$ForceBuild)
     Set-Location $PSScriptRoot
     Initialize-ManagerEnvironment $PSScriptRoot
     $actual = ''
     try { $actual = Invoke-Docker image inspect vmm-manager:dev --format '{{index .Config.Labels "vmm.docker.cli.image"}}' } catch {}
-    if ($actual -ne $script:DockerCliImage) { Invoke-Docker compose -p tentacle-manager build manager }
+    if ($ForceBuild -or $actual -ne $script:DockerCliImage) { Invoke-Docker compose -p tentacle-manager build manager }
     $networks = @(Invoke-Docker network ls --format '{{.Name}}')
     if ($networks -notcontains 'vmm-gateway') { Invoke-Docker network create vmm-gateway }
     Invoke-Docker compose -p tentacle-gateway -f infra/compose.gateway.yaml up -d

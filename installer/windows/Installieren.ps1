@@ -81,7 +81,7 @@ try {
     Invoke-Docker run --rm --mount "type=bind,source=$target,target=/workspace" --mount ('type=bind,source=' + $script:DockerSocket + ',target=/var/run/docker.sock') --workdir /workspace vmm-manager:dev python scripts/installer_config.py --host-data $hostData --check-environment --host-platform windows
     Invoke-Docker compose -p tentacle-manager config --quiet
     Invoke-Docker compose -p tentacle-gateway -f infra/compose.gateway.yaml config --quiet
-    Start-Manager
+    Start-Manager -ForceBuild
     Write-Host 'Gemeinsame Datenbank und phpMyAdmin werden vorbereitet ...'
     Invoke-Docker compose -p tentacle-manager exec -T manager python -c "import shared_operations as s; op,args=s.context(); op.command(args+['up','-d','--wait','--wait-timeout','180','phpmyadmin'],timeout=300)"
     # Trust only the newly generated public local CA, in the original user's store.

@@ -41,7 +41,12 @@ def init():
             state=json.loads((DATA/'storage/apply-status.json').read_text())
             if state.get('status') in ('queued','running') and time.time()-state.get('time',0)<7200:storage_job=state.get('id','')
         except (OSError,ValueError):pass
-        c.execute("UPDATE jobs SET status='interrupted', message='Manager wurde während des Vorgangs beendet.', finished=? WHERE status IN ('queued','running') AND id!=?", (int(time.time()),storage_job))
+        update_job=''
+        try:
+            state=json.loads((DATA/'updates/apply-status.json').read_text())
+            if state.get('status') in ('queued','running') and time.time()-state.get('time',0)<3600:update_job=state.get('job') or ''
+        except (OSError,ValueError):pass
+        c.execute("UPDATE jobs SET status='interrupted', message='Manager wurde während des Vorgangs beendet.', finished=? WHERE status IN ('queued','running') AND id NOT IN (?,?)", (int(time.time()),storage_job,update_job))
         c.execute("UPDATE projects SET status='unknown' WHERE status IN ('starting','stopping','preparing')")
 
 
@@ -81,6 +86,12 @@ def redact(message):
 def job(resource, kind, fn):
     from storage_service import busy
     with LOCK, db() as c:
+        update_file=DATA/'updates/apply-status.json'
+        try:
+            import json
+            updating=json.loads(update_file.read_text()).get('status') in ('queued','running')
+        except (OSError,ValueError):updating=False
+        if updating:raise ValueError('Manager-Update läuft. Bitte den Abschluss abwarten.')
         if busy():raise ValueError('Die Speicherorte werden gerade umgestellt. Bitte den Abschluss abwarten.')
         if c.execute("SELECT 1 FROM jobs WHERE resource=? AND status IN ('queued','running')", (resource,)).fetchone():
             raise ValueError('Für diesen Eintrag läuft bereits ein Vorgang.')
@@ -91,6 +102,13 @@ def job(resource, kind, fn):
         try:
             result = fn()
             status, message = 'done', redact(result or 'Abgeschlossen.')
+            if resource=='manager-update' and kind=='manager-install':
+                from update_service import installation_status
+                state=installation_status() or {}
+                if state.get('job')==ident:
+                    if state.get('status') in ('queued','running'):
+                        return  # The independent worker owns the final status across restart.
+                    status,message=state.get('status','error'),redact(state.get('message','Update beendet.'))
         except Exception as e:
             status, message = 'error', redact(e)
         with db() as c: c.execute('UPDATE jobs SET status=?, message=?, finished=? WHERE id=?', (status,message,int(time.time()),ident))

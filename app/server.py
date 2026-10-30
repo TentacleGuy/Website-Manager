@@ -219,6 +219,9 @@ class Handler(BaseHTTPRequestHandler):
             if path=='/api/kickstart':
                 import kickstart_service
                 return self.send(200,{'versions':kickstart_service.available(),'manual':(DATA/'tools/kickstart.php').is_file()})
+            if path=='/api/manager-update/diagnostics':
+                import update_service
+                return self.send(200,update_service.diagnostics())
             if path=='/api/manager-update':
                 import update_service
                 return self.send(200,update_service.status())
