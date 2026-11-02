@@ -2,6 +2,10 @@
 
 Lokaler Projektmanager für Joomla und WordPress mit gemeinsamen Docker-Laufzeiten, Akeeba-Import, Erweiterungsverwaltung und Manager-Updates über GitHub-Releases.
 
+## Dokumentation
+
+Das [GitHub-Wiki](https://github.com/TentacleGuy/Website-Manager/wiki) enthält nach Aufgaben geordnete Anleitungen. Die gepflegten Quellen liegen unter [docs/wiki/Home.md](docs/wiki/Home.md). Das Wiki dokumentiert ausschließlich die aktuell veröffentlichte Version **1.2.3**, geprüft gegen den Release-Tag `v1.2.3`. Geplante Themen stehen separat in der [Roadmap](docs/wiki/Roadmap.md). Diese README beschreibt dagegen den Entwicklungszweig und kann bereits unveröffentlichte Funktionen enthalten. Der [Dokumentationsabgleich](docs/WIKI-PRUEFUNG.md) erläutert diese Abgrenzung.
+
 ## Änderungsprotokoll
 
 Alle veröffentlichten Versionen und die noch unveröffentlichten Änderungen stehen in [CHANGELOG.md](CHANGELOG.md). Das Protokoll wird bei relevanten Änderungen mitgepflegt; GitHub-Versionshinweise werden bei der Veröffentlichung daraus erzeugt.
@@ -38,7 +42,7 @@ Das Dashboard läuft ohne Anmeldung und bindet standardmäßig nur an den lokale
 
 Das Setup prüft Docker-Dienst, Linux-Container, Prozessorarchitektur und Compose-Version. Der ausgewählte lokale Docker-Kontext wird beibehalten. Ein zur Docker-Servergeneration passendes Docker-CLI-Image wird für den Manager gewählt; Rootless-Sockets werden unter Linux weitergereicht. Auf macOS verwenden Docker Desktop, Colima und OrbStack den Socket innerhalb ihrer Linux-VM. Ein abweichender Socket kann explizit über `VMM_DOCKER_SOCKET` vorgegeben werden.
 
-Vorhandene `.env`-Zusatzwerte, LAN-Einstellungen, Gateway-Ports und Zertifikate bleiben bei einer erneuten Einrichtung erhalten. Die Prüfung steht in `data/setup-report.json` und unter **System → Infrastruktur → Umgebung prüfen**. Fehler werden mit dem konkreten Schritt ausgegeben. Ein nicht verfügbares Image oder eine nicht unterstützte Architektur führt nicht zu einem stillen Rückfall auf eine ältere Datenbank.
+Vorhandene `.env`-Zusatzwerte, LAN-Einstellungen, Gateway-Ports und Zertifikate bleiben bei einer erneuten Einrichtung erhalten. Die Prüfung steht in `data/setup-report.json` und unter **System → Dienste & Rechte → Weitere Informationen zur Umgebung**. Fehler werden mit dem konkreten Schritt ausgegeben. Ein nicht verfügbares Image oder eine nicht unterstützte Architektur führt nicht zu einem stillen Rückfall auf eine ältere Datenbank.
 
 Ein kompatibles Docker muss auf dem jeweiligen Betriebssystem laufen können. Hardware-Virtualisierung, Firmenrichtlinien, belegte Ports oder ein nicht unterstützter DNS-/Zertifikatsspeicher können weiterhin einen manuellen Schritt erfordern. Die Installation behauptet in diesen Fällen keinen erfolgreichen Abschluss.
 
@@ -70,9 +74,9 @@ Unter **Alte Logs löschen** einen Zeitpunkt wählen: Endgültig entfernt werden
 
 Aktionen erscheinen als Meldungen unten rechts. Laufende und wartende Vorgänge bleiben sichtbar; Erfolgsmeldungen verschwinden nach 8 Sekunden, Fehler und Unterbrechungen nach 20 Sekunden. Meldungen lassen sich auch vorher schließen. Die Restlaufzeit bleibt beim Neuladen desselben Browser-Tabs erhalten. Alle Vorgänge bleiben unabhängig von der Meldung im Activity Log nachlesbar.
 
-Die Projektübersicht trennt **Erweiterungsupdates** und **CMS-Updates**. Bei Joomla enthält die Erweiterungsprüfung zusätzlich einen Hinweis auf verfügbare CMS-Updates; CMS-Updates werden im CMS-Backend installiert.
+Die Projektübersicht zeigt einen gespeicherten Erweiterungsupdate-Status. Im Projekt führt **Erweiterungen → Updates prüfen** eine neue Prüfung aus; dort werden auch erkannte CMS-Updates angezeigt. CMS-Updates werden im CMS-Backend installiert.
 
-Unter **Backups** lassen sich sowohl hochgeladene Akeeba-Backupgruppen einschließlich aller Teilarchive als auch erzeugte Projektsicherungen über **Löschen** endgültig entfernen. Backups für noch offene Wiederherstellungen sind gegen Löschen geschützt. Das Löschen eines Backup-Archivs entfernt kein daraus wiederhergestelltes Projekt.
+Unter **Backups** lassen sich Akeeba-Backupgruppen einschließlich aller Teilarchive sowie Projektsicherungen entfernen. Je nach Einstellung unter **System → Löschen & Papierkorb** werden gespeicherte Archive in den Papierkorb verschoben oder endgültig gelöscht. Backups für offene Wiederherstellungen bleiben geschützt. Das Löschen eines Archivs entfernt kein daraus wiederhergestelltes Projekt.
 
 ## Projekte
 
@@ -98,7 +102,7 @@ Nach erfolgreichem Entpacken kann eine fehlgeschlagene Datenbankwiederherstellun
 
 **Projekt → Projekt löschen** öffnet die Bestätigung mit dem Projektnamen. Der Manager startet bei Bedarf die gemeinsame Datenbank, prüft, ob die Projektdatenbank existiert, und sichert sie vor dem Entfernen. Auch noch nicht eingerichtete Projekte ohne Datenbank können gelöscht werden. Bei einem fehlgeschlagenen Datenbankexport bleiben Projekt und Dateien erhalten.
 
-Dateien, SQL-Export und Metadaten liegen danach unter `data/trash/`. Die Projektdatenbank bleibt erhalten; Laufzeiten und Datenbanken anderer Projekte werden nicht gelöscht. Eine automatische Wiederherstellung aus dem Papierkorb ist derzeit nicht in der Oberfläche enthalten. Für die manuelle Wiederherstellung sind Originalname, Dateien und Metadaten reserviert.
+Dateien, SQL-Export und Metadaten liegen danach unter `data/trash/`. Die Projektdatenbank bleibt erhalten; Laufzeiten und Datenbanken anderer Projekte werden nicht gelöscht. Unter **Dateimanager → Papierkorb** können geeignete Projekte mit ihrem ursprünglichen Namen wiederhergestellt werden; sie erscheinen anschließend gestoppt. Belegte Namen und problematische Dateiverknüpfungen verhindern die automatische Übernahme. Fehlt die aufbewahrte Projektdatenbank, wird der gesicherte SQL-Export verwendet.
 
 ## PHP und Protokolle
 
@@ -118,17 +122,17 @@ Die Regeln stehen in `infra/dynamic/protocols.yaml` und werden von `scripts/setu
 
 ## Erweiterungen und Zugangsdaten
 
-Unter **Erweiterungen** sind **WordPress** und **Joomla** getrennt. Jeder Reiter enthält die Bibliothek, **Gespeicherte Pakete** und **Aus Projekt übernehmen**. Zum Hinzufügen genügt ein ZIP-Paket: CMS, Name und Version werden erkannt. Joomla-Update-XML wird aus dem Manifest übernommen; WordPress.org wird nur bei einer passenden Paketidentität verwendet. Eine fremde WordPress-`Update URI` ist keine ausreichende Downloadquelle und bleibt zunächst ungeklärt.
+Unter **Erweiterungen** sind **WordPress** und **Joomla** getrennt. Die Bibliothek und **Gespeicherte Pakete** zeigen die archivierten Erweiterungen. Originalpakete aus bestehenden Websites werden direkt unter **Projekt → Erweiterungen → In Bibliothek speichern** übernommen; die separate globale Übernahmeansicht entfällt. Zum Hinzufügen genügt ein ZIP-Paket: CMS, Name und Version werden erkannt. Joomla-Update-XML wird aus dem Manifest übernommen; WordPress.org wird nur bei einer passenden Paketidentität verwendet. Eine fremde WordPress-`Update URI` ist keine ausreichende Downloadquelle und bleibt zunächst ungeklärt.
 
 **Gespeicherte Pakete** zeigt Version, Größe und Datum sowie Download, Installation und Löschen. Löschen entfernt das ZIP aus dem Archiv, keine installierte Website. Installationszuordnungen bleiben erhalten. Pakete werden während laufender Installationen und Downloads gegen Löschen geschützt.
 
 Beim Bearbeiten einer Erweiterung kann ein globaler Lizenz-/API-Key hinterlegt werden. Abweichende Schlüssel werden unter **Projekt → Lizenzen** verwaltet und bleiben an dieses Projekt gebunden. Bestehende Lizenzdaten werden beibehalten; Anbieter und Pakettyp müssen in der normalen Oberfläche nicht ausgewählt werden. Eine Herstelleraktivierung im CMS ist weiterhin vom jeweiligen Hersteller abhängig.
 
-**Aus Projekt übernehmen** liest die native Updateanbindung einer laufenden, vollständig eingerichteten Website. Eine erkannte Quelle kann übernommen oder das neueste Originalpaket direkt archiviert werden. WordPress nutzt seine eigenen Updateinformationen und bei WPML zusätzlich den vorhandenen OTGS Installer. Joomla verwendet die registrierten Update-XML-Adressen. Die Website wird dabei nicht aktualisiert. Lizenzschlüssel aus der Website bleiben projektgebunden und werden nicht zu globalen Schlüsseln gemacht.
+**In Bibliothek speichern** unter **Projekt → Erweiterungen** liest die native Updateanbindung einer laufenden, vollständig eingerichteten Website und übernimmt die unterstützte Quelle samt herunterladbarem Originalpaket. WordPress nutzt seine eigenen Updateinformationen und bei WPML zusätzlich den vorhandenen OTGS Installer. Joomla verwendet die registrierten Update-XML-Adressen. Die Website wird dabei nicht aktualisiert. Lizenzschlüssel aus der Website bleiben projektgebunden und werden nicht zu globalen Schlüsseln gemacht.
 
 Projektbasierte Quellen benötigen ihr Herkunftsprojekt weiterhin zum Abfragen frischer Downloadlinks. Signierte Links werden nicht dauerhaft als Updatequelle gespeichert. Fehlt eine unterstützte Quelle, ein gültiger Zugang oder ein Originaldownload, meldet der Manager dies; aus installierten Dateien wird kein vermeintliches Herstellerpaket zusammengesetzt. Die Erkennung benötigt keine Ausführung hochgeladener Pakete.
 
-Vor Erweiterungsinstallationen und Sammelupdates erzeugt der Manager Datei-/SQL-Sicherungen. Gemeinsame PHP-Container werden dafür kurz pausiert und anschließend fortgesetzt. Unter **Backups → Projektsicherungen** stehen die Exporte zum Download. Diese Manager-Exporte sind keine Akeeba-Archive; ihr automatischer Rückimport ist nicht enthalten.
+Vor Erweiterungsinstallationen und Sammelupdates erzeugt der Manager Datei-/SQL-Sicherungen. Gemeinsame PHP-Container werden dafür kurz pausiert und anschließend fortgesetzt. Unter **Backups** stehen die Projektsicherungen mit **Wiederherstellen** zur Verfügung. Dateien lassen sich im **Dateimanager** über **Dateien anzeigen** herunterladen. Manager-Exporte sind keine Akeeba-Archive; eine gespeicherte Projektsicherung kann als neues Projekt mit eigener Datenbank eingespielt werden. Vorhandene Projekte werden nicht überschrieben.
 
 ## Speicherorte
 
@@ -140,7 +144,7 @@ Die Konfiguration liegt unter `data/storage/settings.json`, wird in `.env` für 
 
 ## Akeeba-Backups erstellen
 
-Unter **Projekt → Übersicht → Akeeba-Backups** eine Profilnummer wählen und **Akeeba-Backup erstellen** anklicken. Die Funktion nutzt die installierte native Akeeba-CLI; Akeeba wird nicht automatisch installiert. Für Joomla wird eine unterstützte Akeeba-Installation mit aktiviertem Konsolenplugin benötigt, für WordPress die unterstützte CLI von Akeeba Backup Professional.
+Im Projekt **Akeeba Backup erstellen** wählen, ein vorhandenes Profil mit Namen und Nummer auswählen und bestätigen. Die Aktion ist unter anderem in den Zeilenaktionen und unter **Projekt → Backups** erreichbar. Die Funktion nutzt die installierte native Akeeba-CLI; Akeeba wird nicht automatisch installiert. Für Joomla wird eine unterstützte Akeeba-Installation mit aktiviertem Konsolenplugin benötigt, für WordPress die unterstützte CLI von Akeeba Backup Professional.
 
 Der Manager erzeugt ein echtes vollständiges JPA-Archiv im eingestellten Backup-Ordner. Die gewählte Profilkonfiguration wird für diesen Lauf übersteuert: lokaler Ausgabeordner, JPA-Format, keine Cloud-Nachbearbeitung, keine Löschquoten und keine Akeeba-Abschluss-E-Mails. Gespeicherte Akeeba-Profile werden dabei nicht geändert. Die Profilfilter bleiben wirksam. Erst nach Akeebas Abschlussbestätigung und Prüfung aller Archivteile wird der Download freigegeben.
 
@@ -181,7 +185,7 @@ php -l app/tools/restore-backup.php
 
 Python-Standardbibliothek mit HTTP-API und SQLite; Browseroberfläche in JavaScript und CSS. Gemeinsam genutzte MariaDB sowie PHP-/Apache-Laufzeiten werden über Compose gesteuert. PHP-Unterstützung und Erweiterungen sind in `infra/runtime/Dockerfile` definiert.
 
-`data/` enthält Manager-Metadaten, Projektdateien, Paketarchive und Schlüssel. Die Datenbankinhalte liegen im Docker-Volume `vmm-runtime_database`. Ein Kopieren des Quellcodes oder von `data/` allein überträgt dieses Volume nicht. Für einen Umzug sind zusätzlich SQL-Exporte bzw. vollständige Backups nötig. `docker compose down -v` entfernt Datenbankvolumes und gehört nicht zum normalen Aktualisieren.
+`data/` enthält Manager-Metadaten, Projektdateien, Paketarchive und Schlüssel. Die Datenbankinhalte liegen je Datenbankprofil in getrennten Docker-Volumes; das frühere Standardvolume heißt `vmm-runtime_database`. Ein Kopieren des Quellcodes oder von `data/` allein überträgt diese Volumes nicht. Für einen Umzug sind zusätzlich SQL-Exporte bzw. vollständige Backups nötig. `docker compose down -v` entfernt Datenbankvolumes und gehört nicht zum normalen Aktualisieren.
 
 ## Projektordner im Dateimanager öffnen
 
@@ -205,11 +209,11 @@ Erweiterungen lassen sich vollständig aus der Bibliothek entfernen oder einzeln
 
 ### Projektprüfungen und Wiederherstellung
 
-Die erste Prüfung nach dem Start und danach höchstens einmal innerhalb von 24 Stunden prüft laufende Projekte auf Erreichbarkeit und Updates. Der Aufgabenbereich zeigt Startzeit, Fortschritt und die laufenden Schritte. Die Projektprüfung kann nach dem aktuellen Schritt beendet werden. Schreibende Sicherungs- und Installationsvorgänge werden vollständig abgeschlossen.
+Die gespeicherten wiederkehrenden Aufgaben prüfen laufende, fertig eingerichtete Projekte auf Erreichbarkeit und Updates. Vorbelegt ist eine tägliche Prüfung um 09:00 Uhr in Europe/Berlin; verpasste Termine werden beim nächsten Start einmal nachgeholt. Der Aufgabenbereich zeigt Startzeit, Fortschritt und die laufenden Schritte. Die Projektprüfung kann nach dem aktuellen Schritt beendet werden. Schreibende Sicherungs- und Installationsvorgänge werden vollständig abgeschlossen.
 
 Die Erweiterungsliste zeigt den zuletzt gespeicherten Stand; „Updates prüfen“ lädt ihn gezielt neu. Updates stehen zuerst, Joomla-Core-Erweiterungen können getrennt gefiltert werden. Die Projektübersicht zeigt die erkannte CMS-Version und den bekannten Updatezustand.
 
-Unter Backups stehen Projektsicherungen und Akeeba-Archive nebeneinander. „Wiederherstellen“ spielt ein ZIP mit Website und Datenbank in einen neuen Projektnamen ein; vorhandene Projekte werden nicht überschrieben. Der SQL-Import verwendet das eingeschränkte Konto dieses neuen Projekts. Technische Downloads und der Projektpapierkorb sind unter System → Speicherorte erreichbar. Gespeicherte Erweiterungspakete bleiben in der Erweiterungsbibliothek.
+Unter Backups stehen Projektsicherungen und Akeeba-Archive nebeneinander. „Wiederherstellen“ spielt ein ZIP mit Website und Datenbank in einen neuen Projektnamen ein; vorhandene Projekte werden nicht überschrieben. Der SQL-Import verwendet das eingeschränkte Konto dieses neuen Projekts. Technische Downloads und der Projektpapierkorb sind im **Dateimanager** erreichbar. Gespeicherte Erweiterungspakete bleiben in der Erweiterungsbibliothek.
 
 Ein Standardbenutzer wird nur im Manager gespeichert. „Backend“ verwendet diesen Benutzer, „Login →“ den gewählten Benutzer. Dazu wird ein 60 Sekunden gültiger Einmal-Link erstellt; vorhandene CMS-Passwörter werden nicht verändert. Der letzte Administrator und der gewählte Standardbenutzer sind vor versehentlicher Löschung geschützt. Bei WordPress werden Inhalte beim Löschen einem verbleibenden Benutzer zugeordnet.
 
@@ -219,7 +223,7 @@ Ein Standardbenutzer wird nur im Manager gespeichert. „Backend“ verwendet di
 
 ## Dateimanager und Zeitpläne
 
-Der Dateimanager bündelt gespeicherte CMS- und Erweiterungspakete, Akeeba-Archive, ZIP-Projektsicherungen, Kickstart-Dateien, Manager-Downloads und Projektpapierkörbe. Such- und Typfilter sowie Dateidetails helfen beim Verwalten. Löschungen verwenden dieselben Schutzprüfungen wie die Bibliothek. Bei mehrteiligen Backups wird die gesamte Sicherungsgruppe entfernt.
+Der Dateimanager bündelt gespeicherte CMS- und Erweiterungspakete, Akeeba-Archive, ZIP-Projektsicherungen, Kickstart-Dateien, Manager-Downloads und Projektpapierkörbe. Eine gemeinsame Suche über die angezeigten Spalten, sortierbare Spalten und Dateidetails helfen beim Verwalten. Ein Typ-Dropdown und einzelne Spaltenfilter sind im aktuellen Dateimanager entfernt. Löschungen verwenden dieselben Schutzprüfungen und die Papierkorbeinstellung wie die Bibliothek. Bei mehrteiligen Backups wird die gesamte Sicherungsgruppe entfernt.
 
 Unter Aufgaben lassen sich tägliche und wöchentliche Projektprüfungen und Projektsicherungen mit Uhrzeit, Zeitzone und Projektauswahl anlegen, bearbeiten, pausieren und manuell starten. Die tägliche Projektprüfung ist vorbelegt. Der Manager muss zur Ausführung laufen; ein verpasster Termin wird beim nächsten Start einmal nachgeholt. Während eines laufenden Projektschritts beendet ein Abbruch zunächst diesen Schritt, damit keine unvollständigen Sicherungen entstehen.
 

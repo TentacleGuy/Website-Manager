@@ -4,6 +4,10 @@ Alle wesentlichen Änderungen am Website Manager werden hier dokumentiert. Neue 
 
 ## [Unveröffentlicht]
 
+Noch keine Änderungen.
+
+## [2.0.0] - 2026-11-02
+
 ### Neu
 
 - Papierkorb für gelöschte Pakete und Archive mit Wiederherstellung und endgültigem Löschen; unter System zwischen direkter Löschung und Papierkorb wählen und die Aufbewahrung in Tagen festlegen. Abgelaufene Einträge werden bei laufendem Manager automatisch bereinigt und im Activity Log protokolliert. Vorhandene Projektpapierkörbe erhalten bei der Übernahme eine neue Aufbewahrungsfrist.
@@ -18,6 +22,7 @@ Alle wesentlichen Änderungen am Website Manager werden hier dokumentiert. Neue 
 
 ### Verbessert
 
+- Deutsches Wiki mit Installations-, Projekt-, Sicherungs- und Fehlerbehebungsanleitungen für die aktuell veröffentlichte Version ergänzt und gegen deren Release-Tag geprüft. Geplante Weiterentwicklungen stehen separat in einer Roadmap; die Anleitungen werden erst mit einer neuen Veröffentlichung angehoben. Die README kennzeichnet ihren abweichenden Entwicklungsstand.
 - Animierter Sonne-/Mond-Schalter ohne sichtbare Beschriftung unten links in der Sidebar, mit Tastaturbedienung, gespeicherter Auswahl und Berücksichtigung reduzierter Bewegung.
 - Dateimanager mit den Reitern Alle Dateien und Papierkorb, einer gemeinsamen Suche über alle Spalten, sortierbaren Spalten und nebeneinanderstehenden Dateiaktionen; Typ-Dropdown und einzelne Spaltenfilter entfernt.
 - Projektübersicht als filter- und sortierbare Tabelle mit getrennten Status- und Updateanzeigen und Aktionen in einer Zeile.
@@ -32,6 +37,7 @@ Alle wesentlichen Änderungen am Website Manager werden hier dokumentiert. Neue 
 
 ### Behoben
 
+- Automatisierte Tests wieder zur Versionierung freigeben, damit die GitHub-Prüfungen auch mit einem frischen Checkout vollständig verfügbar sind. PNG-Bilder nur im Hauptordner als lokale Screenshots ausschließen, damit Anwendungs-, Dokumentations- und Testbilder in Unterordnern erfasst werden können.
 - CMS-Versionen aus der vorhandenen Installation aktualisieren und CMS-/Erweiterungsupdates konsistenter zählen und darstellen.
 - Unnötigen Neuaufbau von Ansichten bei Hintergrundaktualisierungen reduzieren.
 - Speicherorte sofort anzeigen; umfangreiche Größenberechnungen im Hintergrund ausführen.
