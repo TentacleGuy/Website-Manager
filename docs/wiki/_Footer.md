@@ -1,1 +1,1 @@
-Dokumentation für die veröffentlichte Version **1.2.3** · [Release](https://github.com/TentacleGuy/Website-Manager/releases/tag/v1.2.3) · [Startseite](Home.md) · [Roadmap](Roadmap.md)
+Dokumentation für die veröffentlichte Version **2.0.0** · [Release](https://github.com/TentacleGuy/Website-Manager/releases/tag/v2.0.0) · [Startseite](Home.md) · [Roadmap](Roadmap.md)

@@ -1,12 +1,14 @@
 # System und Fehlerbehebung
 
-Unter **System** stehen in Version 1.2.3 die Bereiche **PHP-Laufzeiten**, **Infrastruktur**, **Datenbankzugänge**, **Manager-Updates**, **Akeeba Kickstart** und **Speicherorte** bereit.
+Unter **System → Dienste & Rechte** den Zustand der Managerdienste und ihre Zugriffsrechte prüfen. Dieser Reiter hieß in älteren Beschreibungen **Infrastruktur**.
 
-## Umgebung prüfen
+## Dienste prüfen
 
-**System → Infrastruktur → Umgebung prüfen** prüft die Docker-Anbindung und die unterstützte Umgebung. Das Ergebnis liegt auch unter `data/setup-report.json`. Der Bereich zeigt außerdem Informationen zur Infrastruktur und den PHP-Ports.
+**Dienste und Rechte prüfen** untersucht Docker, interne Netzwerke, Dienste und die Speicherbereiche. Der Speichertest schreibt, liest und entfernt eine kleine Prüfdatei. Bei aktiven PHP-Laufzeiten werden zusätzlich deren Rechte an den Projektordnern geprüft. Das ist keine vollständige Kontrolle sämtlicher Website-Dateien.
 
-Docker Engine beziehungsweise Docker Desktop auf dem Installationsrechner starten. Falls die Manager- oder Gateway-Umgebung fehlt oder beendet ist, die lokale **Starten**-Datei verwenden. Eine zentrale Dienste-/Rechteverwaltung mit Start-/Stoppaktionen ist nicht Bestandteil von 1.2.3.
+Eigene Dienste können je Zustand gestartet, neu gestartet oder beendet werden. Laufende Arbeiten schützen benötigte Dienste vor dem Beenden. Mehrere Projekte können dieselbe PHP-Laufzeit nutzen; ein Neustart betrifft dann mehrere Websites. PHP kann beim nächsten Website-Aufruf wieder bei Bedarf starten.
+
+Nach dem Beenden des Managers die lokale **Starten**-Datei verwenden. Ein beendeter Manager kann Docker Desktop oder Docker Engine nicht selbst wieder starten. Fehlende Gateway-/DNS-Container werden durch die lokale Startdatei eingerichtet.
 
 ## Häufige Probleme
 
@@ -15,22 +17,23 @@ Docker Engine beziehungsweise Docker Desktop auf dem Installationsrechner starte
 | Dashboard nicht erreichbar | Docker starten, lokale Startdatei öffnen, Port 8090 und Setup-Protokolle prüfen |
 | `projekt.vmm.test` wird nicht gefunden | Plattform-Systemeinrichtung und lokalen DNS prüfen; VPN-/Firmeneinstellungen berücksichtigen |
 | HTTPS-Zertifikat wird abgelehnt | Öffentliche lokale CA im passenden System-/Browser-Zertifikatsspeicher vertrauen; Zertifikatsgültigkeit prüfen |
-| Projektordner öffnet nicht | Manager lokal über localhost öffnen, Startdatei einmal ausführen und die externe Anwendung im Browser erlauben |
+| Ordnerdialog erscheint nicht | Manager lokal über localhost öffnen, Startdatei einmal ausführen, externe Anwendung im Browser erlauben |
 | Ordnerzugriff verweigert | Betriebssystemrechte und Docker-Ordnerfreigaben prüfen |
-| Erweiterungsliste soll neu geladen werden | Projekt → Erweiterungen & Updates → Liste aktualisieren beziehungsweise Updates prüfen |
+| Erweiterungen oder Benutzer wirken veraltet | Im Projekt gezielt **Updates prüfen** oder **Benutzerliste aktualisieren** ausführen |
 | Projekt nicht bereit für Installation | Projekt starten und CMS-Einrichtung beziehungsweise Wiederherstellung abschließen |
 | Backup-Import scheitert | Alle Archivteile, Passwort, Kickstart und passende PHP-Version prüfen; Activity Log lesen |
+| Datei lässt sich nicht löschen | Benötigter Download, Import, Installation oder Prüfung läuft möglicherweise noch |
 
-## Projektordner öffnen
+## Ordneranbindung
 
-**Dateipfad öffnen** verwendet die lokale Desktop-Anbindung `tentacle-project://`. Die Startdatei registriert sie für den aktuellen Benutzer. Der Browser kann beim ersten Aufruf eine Bestätigung verlangen. Bei Zugriff von einem anderen Rechner wird nur der Pfad angezeigt.
+**Ordnerfreigabe anfragen** testet den nativen Dialog, ohne Speicherorte zu ändern. **Ordneranbindung erneut einrichten** erneuert eine vorhandene Registrierung. Fehlt diese vollständig, zuerst die lokale Startdatei ausführen.
 
-Die Anbindung öffnet vorhandene Projektordner. Sie ist in 1.2.3 kein allgemeiner nativer Ordnerauswahldialog für Speicherorte. Dort absolute Pfade manuell eintragen.
+macOS verwendet den Systemdialog, Windows den FolderBrowserDialog und Linux `zenity` oder `kdialog`. Eine dauerhaft abgelehnte Browser- oder Betriebssystemfreigabe muss dort wieder erlaubt werden. Die Website kann sie nicht erzwingen.
 
 ## Protokolle
 
 - Einrichtung: `logs/` im Installationsordner.
-- Umgebungsprüfung: `data/setup-report.json` und System → Infrastruktur.
+- Umgebungsprüfung: `data/setup-report.json` und die weiteren Umgebungsinformationen im Systemreiter.
 - Manager-Update: `data/updates/<Kennung>/update.log`.
 - Projektaktionen: **Activity Log**.
 

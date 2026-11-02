@@ -22,6 +22,6 @@ Bei einer unterbrochenen Einrichtung **Tentacle Einrichtung fortsetzen.command**
 
 Die Paketinstallation verwendet für ihren lokalen DNS-Dienst Port 1053 und richtet die Auflösung für `vmm.test` ein. Der öffentliche lokale CA-Nachweis wird im Zertifikatsspeicher vertraut gemacht. VPN- oder Firmen-DNS kann die Prüfung verhindern; dann meldet das Setup keinen erfolgreichen Abschluss.
 
-Für das Öffnen von Projektordnern im Finder den Manager mindestens einmal über seine Startdatei öffnen. Bei verweigerten Dateizugriffen die macOS-Einstellungen unter **Datenschutz & Sicherheit → Dateien & Ordner** prüfen.
+Für Finder- und Ordnerdialoge den Manager mindestens einmal über seine Startdatei öffnen. Bei verweigerten Dateizugriffen die macOS-Einstellungen unter **Datenschutz & Sicherheit → Dateien & Ordner** prüfen.
 
 Weiter: [Projekt erstellen](Projekte.md) oder [System prüfen](System-und-Fehlerbehebung.md).

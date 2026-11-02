@@ -34,6 +34,6 @@ Im Installationsordner ausführen:
 bash Starten.sh
 ```
 
-Für die lokale Ordneranbindung ist eine Desktop-Sitzung mit `curl` und XDG-Werkzeugen nötig. Für Speicherorte werden absolute Pfade manuell eingetragen.
+Für die lokale Ordneranbindung ist eine Desktop-Sitzung mit `curl` und XDG-Werkzeugen nötig. Die native Ordnerauswahl verwendet `zenity` oder `kdialog`; alternativ einen Pfad manuell eintragen.
 
 Weiter: [Projekt erstellen](Projekte.md) oder [Fehler beheben](System-und-Fehlerbehebung.md).

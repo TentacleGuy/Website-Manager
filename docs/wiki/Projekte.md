@@ -4,25 +4,28 @@ Ein Projekt verbindet Website-Dateien, CMS, PHP-Laufzeit und eine eigene Projekt
 
 ## Neue Website erstellen
 
-1. **CMS-Archiv** öffnen. Unter **Versionen entdecken** das CMS wählen, Versionen abrufen und ein Paket herunterladen. Alternativ unter **Paket hochladen** CMS, Version und ZIP angeben. **Mein Archiv** zeigt gespeicherte Pakete.
-2. Unter **Projekte** ein neues Projekt anlegen.
-3. Einen Namen vergeben: kleiner Buchstabe am Anfang, danach kleine Buchstaben, Ziffern und Bindestriche; maximal 40 Zeichen.
-4. Das archivierte CMS-Paket wählen. PHP und Datenbank automatisch oder ausdrücklich auswählen.
-5. Für die automatische Einrichtung die Administratordaten eintragen. Das Passwort muss mindestens zwölf Zeichen haben.
-6. Optional Erweiterungen zur Mitinstallation auswählen und das Projekt anlegen.
+1. **CMS-Archiv** öffnen und WordPress oder Joomla auswählen.
+2. Versionen abrufen und ein Paket herunterladen oder ein CMS-ZIP hochladen. Beim Upload werden CMS und Version erkannt.
+3. Unter **Projekte** ein neues Projekt anlegen.
+4. Einen Namen vergeben: kleiner Buchstabe am Anfang, danach kleine Buchstaben, Ziffern und Bindestriche; maximal 40 Zeichen.
+5. Das archivierte CMS-Paket wählen. PHP und Datenbank automatisch oder ausdrücklich auswählen.
+6. Für die automatische Einrichtung die Administratordaten eintragen. Das Passwort muss mindestens zwölf Zeichen haben.
+7. Optional Erweiterungen zur Mitinstallation auswählen und das Projekt anlegen.
 
-Die automatische CMS-Einrichtung unterstützt WordPress und Joomla ab 4.3. Für ältere Joomla-Versionen den CMS-Assistenten verwenden. Laufende Schritte und Fehler erscheinen im [Activity Log](Aktivitaeten.md).
+Die automatische CMS-Einrichtung unterstützt WordPress und Joomla ab 4.3. Für ältere Joomla-Versionen den CMS-Assistenten verwenden. Laufende Schritte und Fehler erscheinen unter [Aufgaben und Aktivitäten](Aufgaben-und-Aktivitaeten.md).
 
 ## Website öffnen
 
-Die Projektübersicht bietet eine Suche sowie Links für Frontend, Backend, phpMyAdmin und **Details →**. **Dateipfad öffnen** öffnet den Website-Ordner auf dem Installationsrechner.
+Die Projektübersicht ist eine Tabelle mit Suche, Spaltenfiltern und Sortierung. **Frontend**, **Backend**, **Projektdetails**, Akeeba-Aktionen und der Projektordner sind über die Zeilenaktionen erreichbar. Symbole zeigen ihre Beschriftung beim Darüberfahren.
 
-Die Detailansicht enthält **Übersicht**, **Erweiterungen & Updates**, **Benutzer** und **Lizenzen**. In der Übersicht stehen PHP-Auswahl, Akeeba-Backups, **Jetzt sichern**, Datenbankzugänge und **Projekt löschen**.
+Die Detailansicht enthält **Übersicht**, **Erweiterungen**, **Backups**, **Benutzer**, **Lizenzen**, **Datenbank** und **Einstellungen**. Unter **Datenbank** stehen Projektzugänge und der Link zu phpMyAdmin.
 
-Eine vorhandene Website lässt sich über den [Akeeba-Import](Akeeba-Import.md) übernehmen.
+Eine vorhandene Website kann über [Akeeba-Import](Akeeba-Import.md) oder eine [gespeicherte Projektsicherung](Backups-und-Wiederherstellung.md) übernommen werden.
 
-## Projekt löschen
+## Projekt löschen und zurückholen
 
-In der Projektübersicht der Detailansicht **Projekt löschen** wählen und den Projektnamen bestätigen. Vor dem Entfernen sichert der Manager eine vorhandene Projektdatenbank. Schlägt der Export fehl, bleibt das Projekt bestehen. Andere Projekte und ihre Laufzeiten werden nicht gelöscht.
+Unter den Projekteinstellungen **Projekt löschen** wählen und den Projektnamen bestätigen. Vor dem Entfernen sichert der Manager eine vorhandene Projektdatenbank. Schlägt der Export fehl, bleibt das Projekt bestehen. Andere Projekte und ihre Laufzeiten werden nicht gelöscht.
 
-Die Dateien, Metadaten und gegebenenfalls der SQL-Export liegen danach unter `data/trash/`. Die Projektdatenbank bleibt erhalten. Version 1.2.3 bietet dafür keine Wiederherstellungsschaltfläche. Die aufbewahrten Daten nicht löschen, wenn eine spätere manuelle Wiederherstellung benötigt wird.
+Die Projektlöschung legt Dateien, Metadaten und gegebenenfalls SQL unter `data/trash/` ab; die Projektdatenbank bleibt zunächst erhalten. Das ist ein eigener Ablauf gegenüber der einstellbaren direkten Löschung gespeicherter Pakete.
+
+In Version 2.0.0 lässt sich das Projekt unter **Dateimanager → Papierkorb → Wiederherstellen** zurückholen. Es erscheint gestoppt unter seinem ursprünglichen Namen. Ein belegter Name oder problematische Dateiverknüpfungen verhindern die automatische Wiederherstellung. Verfügbare Datenbanken werden wiederverwendet; andernfalls wird der gesicherte SQL-Export eingespielt. Die angezeigte Aufbewahrungsfrist beachten.

@@ -4,7 +4,7 @@ Der Import übernimmt eine vorhandene Joomla- oder WordPress-Website samt Datenb
 
 ## Import durchführen
 
-1. **Backups → Backup importieren** öffnen.
+1. **Backups → Akeeba-Backup importieren** öffnen.
 2. Hauptarchiv und alle Teile gemeinsam hochladen: JPA, JPS oder ZIP sowie zugehörige J01… beziehungsweise Z01… . Pro Datei sind höchstens 4 GB zulässig.
 3. Bei der gespeicherten Backupgruppe **Projekt erstellen** wählen.
 4. Einen freien Projektnamen vergeben. CMS und Version werden aus den entpackten Dateien erkannt.

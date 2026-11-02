@@ -4,11 +4,11 @@ Der Manager besteht aus einer Python-HTTP-API mit SQLite, einer Browseroberfläc
 
 ## Aus dem Quellcode starten
 
-Für den dokumentierten Stand zuerst den Release-Tag `v1.2.3` auschecken. Mit lokalem Docker, Compose, Python 3.12 und mkcert für den folgenden Zertifikatsweg ausführen:
+Für den dokumentierten Release-Stand mit lokalem Docker, Compose, Python 3.12 und mkcert ausführen:
 
 ```sh
-git clone --branch v1.2.3 --depth 1 https://github.com/TentacleGuy/Website-Manager.git Website-Manager-1.2.3
-cd Website-Manager-1.2.3
+git clone --branch v2.0.0 --depth 1 https://github.com/TentacleGuy/Website-Manager.git Website-Manager-2.0.0
+cd Website-Manager-2.0.0
 python3 -m venv .venv
 . .venv/bin/activate
 python3 -m pip install -r requirements.txt
@@ -36,22 +36,35 @@ Dashboard: `http://localhost:8090/`. Die Ordneranbindung wird im Quellcodebetrie
 | `app/installer_assets/` | Mitgelieferte Installations- und Desktophelfer, auch für Updates |
 | `scripts/` | Einrichtung, Paketbau und Prüfungen |
 | `tests/` | Automatisierte Tests und Windows-Prüfung |
+| `docs/wiki/` | Gepflegte Wiki-Quellen |
 | `data/` | Lokale Laufzeitdaten; nicht versionieren |
 
 ## Prüfen
 
 ```sh
 python3 -m unittest discover -s tests -v
+python3 scripts/changelog.py
 node --check app/static/app.js
+node --check app/static/workspace.js
+node --check app/static/refinements.js
+node --check app/static/manager-ui.js
+node --check app/static/system-ui.js
+node --check app/static/recycle-ui.js
+node --check app/static/icons.js
 php -l app/tools/restore-backup.php
+python3 scripts/platform_smoke.py
 ```
 
-Die verfügbaren Prüfungen ergeben sich aus dem Workflow des Release-Tags. Ein grüner Unit-Testlauf allein bestätigt keine vollständige Installation mit realen Docker-Diensten.
+Die GitHub-Workflows prüfen plattformübergreifend. Ein grüner Unit-Testlauf allein bestätigt keine vollständige Installation mit realen Docker-Diensten.
 
-## Dokumentation und neue Releases
+## Release erstellen
 
-Diese Anleitungen bleiben auf Version 1.2.3, bis eine neue Version veröffentlicht wird. Die [Roadmap](Roadmap.md) beschreibt den Ausblick. Änderungen am Entwicklungszweig können deshalb vom Handbuch abweichen.
+1. Benutzerrelevante Änderungen unter **Unveröffentlicht** in `CHANGELOG.md` pflegen.
+2. Für eine tatsächliche Veröffentlichung Einträge in einen Abschnitt mit Version und Datum übernehmen und `app/release.json` angleichen.
+3. Unter **Unveröffentlicht** anschließend `Noch keine Änderungen.` setzen.
+4. `python3 scripts/changelog.py --tag vX.Y.Z` und die erforderlichen Tests ausführen.
+5. Die Änderungen veröffentlichen und das passende Tag pushen. Der Workflow erzeugt Installationspakete und Versionshinweise aus dem Changelog.
 
-Für die Arbeit am aktuellen Entwicklungszweig gelten dessen `AGENTS.md`, `CHANGELOG.md`, Workflows und Prüfskripte. Sie sind nicht automatisch Teil des alten Release-Tags. Die Wiki-Quellen werden im Entwicklungszweig unter `docs/wiki/` gepflegt und erst nach einem Release auf dessen Funktionsstand angehoben.
+Lokaler Paketbau: `python3 scripts/build_release.py --tag vX.Y.Z`. Der Paketbau synchronisiert Plattformdateien aus `installer/` nach `app/installer_assets/`; beide Bereiche bei Änderungen prüfen. Der Paketbau schreibt Dateien und ist keine reine Leseprüfung.
 
-In Git gehören Quellcode, Tests, Beispiele ohne Geheimnisse, Dokumentation und Build-/Workflow-Dateien. Nicht hinein gehören `.env`, lokale Projekte, Schlüssel, Datenbanken, Backups, virtuelle Umgebungen und erzeugte Pakete.
+In Git gehören Quellcode, Tests, Beispiele ohne Geheimnisse, Dokumentation und Build-/Workflow-Dateien. Nicht hinein gehören `.env`, lokale Projekte, Schlüssel, Datenbanken, Backups, virtuelle Umgebungen und erzeugte Pakete. Kein zweites unabhängiges Versionsprotokoll im Wiki führen.

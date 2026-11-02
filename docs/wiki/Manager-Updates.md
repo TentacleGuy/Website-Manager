@@ -20,4 +20,4 @@ Der Ablauf setzt eine reguläre Compose-Installation mit `data/` als Unterverzei
 
 Bei dem älteren Windows-Fehler `apply.py: No such file or directory` das aktuelle Windows-Setup vollständig entpacken und `Installieren.cmd` erneut starten. Denselben Installationsordner verwenden; individuelle `VMM_INSTALL_DIR`-Werte beibehalten.
 
-Die regulären Wiki-Anleitungen beschreiben Version 1.2.3. Nach einer neuen Veröffentlichung werden sie auf den neuen Release-Stand gebracht. Geplante Funktionen stehen separat in der [Roadmap](Roadmap.md).
+Die verfügbaren Release-Funktionen ergeben sich aus dem [Changelog](https://github.com/TentacleGuy/Website-Manager/blob/main/CHANGELOG.md). Dieses Handbuch gilt für Version 2.0.0; geplante Themen stehen separat in der [Roadmap](Roadmap.md).

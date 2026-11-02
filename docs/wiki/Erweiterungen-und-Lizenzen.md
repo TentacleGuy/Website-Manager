@@ -2,29 +2,30 @@
 
 Die Bibliothek speichert Originalpakete für Joomla und WordPress. Ein gespeichertes Paket und eine im Projekt installierte Erweiterung sind getrennte Dinge.
 
-## Paket hinzufügen und installieren
+## Paket hinzufügen und verwenden
 
-1. **Erweiterungen** öffnen und WordPress oder Joomla auswählen.
+1. **Erweiterungen** öffnen und das CMS auswählen.
 2. **Erweiterung hinzufügen** wählen und ein ZIP hochladen. CMS, Name und Version werden erkannt.
-3. In der Bibliothek die gewünschte Version wählen und **In Projekt installieren** öffnen.
-4. Projekt, Version und gegebenenfalls Lizenz auswählen und bestätigen.
+3. Die Erweiterung auswählen und gespeicherte Versionen ansehen oder herunterladen.
+4. Zum Installieren **Projekt → Erweiterungen → Erweiterung installieren** öffnen.
+5. Ein Katalogpaket mit Version und Lizenz auswählen oder direkt ein ZIP hochladen. Das Projekt muss laufen und fertig eingerichtet sein.
 
-Alternativ **Projekt → Erweiterungen & Updates → Erweiterung installieren** öffnen und **Aus Katalog installieren** oder **ZIP-Datei hochladen** verwenden. Das Projekt muss laufen und fertig eingerichtet sein. Themes werden nicht automatisch aktiviert.
+Ein direkt hochgeladenes ZIP wird auch in der Bibliothek gespeichert. Passt es nicht zum CMS, wird es nicht im ausgewählten Projekt installiert. Themes werden nicht automatisch aktiviert.
 
-**Gespeicherte Pakete** zeigt die archivierten ZIP-Versionen samt Download-, Installations- und Löschaktionen. Ein gelöschtes ZIP entfernt keine installierte Erweiterung aus einer Website.
+## Updateprüfung und Übernahme aus einem Projekt
 
-## Quelle aus einer Website übernehmen
+**Projekt → Erweiterungen → Updates prüfen** lädt den aktuellen CMS-Stand. Die zuvor angezeigte Liste ist ein gespeicherter Stand mit Prüfzeitpunkt. Verfügbare Updates stehen oben; Joomla-Core-Erweiterungen lassen sich gesondert filtern.
 
-Unter **Erweiterungen → Aus Projekt übernehmen** eine laufende, fertig eingerichtete Website wählen und **Erweiterungen auslesen** ausführen. Eine unterstützte Quelle kann übernommen oder das Originalpaket archiviert werden. Die Website wird dabei nicht aktualisiert.
+**In Bibliothek speichern** übernimmt eine unterstützte Updateanbindung und archiviert das verfügbare Originalpaket. Die separate globale Ansicht **Aus Projekt übernehmen** ist in Version 2.0.0 entfernt.
 
 WordPress verwendet native Updateinformationen und bei WPML gegebenenfalls den vorhandenen OTGS Installer; Joomla verwendet registrierte Update-XML-Adressen. Projektbasierte Quellen benötigen das Herkunftsprojekt für frische Downloadlinks. Ohne unterstützten Originaldownload wird kein Herstellerpaket aus installierten Dateien nachgebaut.
 
 ## Updates installieren
 
-Unter **Projekt → Erweiterungen & Updates** stehen **Liste aktualisieren**, **Updates prüfen** und **Erweiterungsupdates installieren** bereit. Einzelne Erweiterungen besitzen eine **Update**-Aktion. CMS-Updates werden im CMS-Backend durchgeführt.
-
-Vor Installationen und Sammelupdates erstellt der Manager Datei-/SQL-Projektsicherungen. Gemeinsam verwendete PHP-Laufzeiten können dafür kurz pausieren. Sicherungen stehen unter **Backups → Projektsicherungen** zum Download.
+Einzelne Erweiterungen über **Update installieren**, mehrere über **Alle Erweiterungen updaten** aktualisieren. Zuvor erstellt der Manager Datei-/SQL-Projektsicherungen. Gemeinsam verwendete PHP-Laufzeiten können dabei kurz pausieren. CMS-Updates werden im CMS-Backend durchgeführt.
 
 ## Lizenzen
 
-Beim Bearbeiten einer Bibliothekserweiterung lässt sich ein globaler Lizenz-/API-Key speichern. Abweichende Schlüssel werden über **Projektschlüssel** beziehungsweise **Projekt → Lizenzen** verwaltet und bleiben projektgebunden. Der Installationsdialog bietet die Auswahl passender gespeicherter Lizenzen. Eine notwendige Herstelleraktivierung im CMS hängt weiterhin vom Anbieter ab.
+Beim Bearbeiten einer Bibliothekserweiterung lässt sich ein globaler Lizenz-/API-Key speichern. Projektgebundene Schlüssel bleiben auf das betreffende Projekt beschränkt. Der Installationsdialog bietet die Lizenzwahl und das Anlegen einer neuen projektgebundenen Lizenz. Eine notwendige Herstelleraktivierung im CMS hängt weiterhin vom Anbieter ab.
+
+Das Löschen eines gespeicherten ZIP entfernt keine installierte Erweiterung aus einer Website. Für die Aufbewahrung gilt die unter [Löschen und Papierkorb](Dateimanager-und-Papierkorb.md) eingestellte Regel.
