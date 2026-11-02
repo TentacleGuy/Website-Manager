@@ -1,4 +1,4 @@
-**Website Manager 2.0.0**
+**Website Manager 2.0.1**
 
 - [Startseite](Home.md)
 - [Voraussetzungen](Voraussetzungen.md)
@@ -18,6 +18,8 @@
 - [Benutzer und Zugangsdaten](Benutzer-und-Zugangsdaten.md)
 
 **Betrieb**
+
+- [Startvideo](Startvideo.md)
 
 - [Backups und Wiederherstellung](Backups-und-Wiederherstellung.md)
 - [Dateimanager und Papierkorb](Dateimanager-und-Papierkorb.md)

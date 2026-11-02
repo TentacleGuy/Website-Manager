@@ -24,8 +24,8 @@ Eine vorhandene Website kann über [Akeeba-Import](Akeeba-Import.md) oder eine [
 
 ## Projekt löschen und zurückholen
 
-Unter den Projekteinstellungen **Projekt löschen** wählen und den Projektnamen bestätigen. Vor dem Entfernen sichert der Manager eine vorhandene Projektdatenbank. Schlägt der Export fehl, bleibt das Projekt bestehen. Andere Projekte und ihre Laufzeiten werden nicht gelöscht.
+In der Projektliste das **Papierkorb-Icon** in der Zeile des Projekts wählen. Alternativ unter den Projekteinstellungen **Projekt löschen** öffnen. Der Dialog zeigt den Projektnamen; dieser muss zur Bestätigung eingegeben werden. Während eines laufenden Projektvorgangs ist die Löschaktion deaktiviert. Vor dem Entfernen sichert der Manager eine vorhandene Projektdatenbank. Schlägt der Export fehl, bleibt das Projekt bestehen. Andere Projekte und ihre Laufzeiten werden nicht gelöscht.
 
 Die Projektlöschung legt Dateien, Metadaten und gegebenenfalls SQL unter `data/trash/` ab; die Projektdatenbank bleibt zunächst erhalten. Das ist ein eigener Ablauf gegenüber der einstellbaren direkten Löschung gespeicherter Pakete.
 
-In Version 2.0.0 lässt sich das Projekt unter **Dateimanager → Papierkorb → Wiederherstellen** zurückholen. Es erscheint gestoppt unter seinem ursprünglichen Namen. Ein belegter Name oder problematische Dateiverknüpfungen verhindern die automatische Wiederherstellung. Verfügbare Datenbanken werden wiederverwendet; andernfalls wird der gesicherte SQL-Export eingespielt. Die angezeigte Aufbewahrungsfrist beachten.
+In Version 2.0.1 lässt sich das Projekt unter **Dateimanager → Papierkorb → Wiederherstellen** zurückholen. Es erscheint gestoppt unter seinem ursprünglichen Namen. Ein belegter Name oder problematische Dateiverknüpfungen verhindern die automatische Wiederherstellung. Verfügbare Datenbanken werden wiederverwendet; andernfalls wird der gesicherte SQL-Export eingespielt. Die angezeigte Aufbewahrungsfrist beachten.

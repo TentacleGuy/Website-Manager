@@ -38,3 +38,7 @@ macOS verwendet den Systemdialog, Windows den FolderBrowserDialog und Linux `zen
 - Projektaktionen: **Activity Log**.
 
 Protokolle vor einer öffentlichen Weitergabe auf Zugangsdaten und persönliche Projektangaben prüfen.
+
+## Startvideo einstellen
+
+Unter **System → Startvideo** die Wiedergabe beim Öffnen des Managers ein- oder ausschalten. **Startvideo ansehen** öffnet eine Vorschau. Die Auswahl gilt für den jeweiligen Browser. Weitere Hinweise unter [Startvideo](Startvideo.md).

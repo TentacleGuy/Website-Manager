@@ -4,7 +4,7 @@ Lokaler Projektmanager für Joomla und WordPress mit gemeinsamen Docker-Laufzeit
 
 ## Dokumentation
 
-Das [GitHub-Wiki](https://github.com/TentacleGuy/Website-Manager/wiki) enthält nach Aufgaben geordnete Anleitungen. Die gepflegten Quellen liegen unter [docs/wiki/Home.md](docs/wiki/Home.md). Das Wiki dokumentiert ausschließlich die aktuell veröffentlichte Version **2.0.0**, geprüft gegen den Release-Tag `v2.0.0`. Geplante Themen stehen separat in der [Roadmap](docs/wiki/Roadmap.md). Diese README beschreibt dagegen den Entwicklungszweig und kann bereits unveröffentlichte Funktionen enthalten. Der [Dokumentationsabgleich](docs/WIKI-PRUEFUNG.md) erläutert diese Abgrenzung.
+Das [GitHub-Wiki](https://github.com/TentacleGuy/Website-Manager/wiki) enthält nach Aufgaben geordnete Anleitungen. Die gepflegten Quellen liegen unter [docs/wiki/Home.md](docs/wiki/Home.md). Das Wiki dokumentiert ausschließlich die aktuell veröffentlichte Version **2.0.1**, geprüft gegen den Release-Tag `v2.0.1`. Geplante Themen stehen separat in der [Roadmap](docs/wiki/Roadmap.md). Diese README beschreibt dagegen den Entwicklungszweig und kann bereits unveröffentlichte Funktionen enthalten. Der [Dokumentationsabgleich](docs/WIKI-PRUEFUNG.md) erläutert diese Abgrenzung.
 
 ## Änderungsprotokoll
 
