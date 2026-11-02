@@ -113,6 +113,35 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(page.encode())
         return True
 
+    def splash_video(self):
+        """Serve the bundled video with byte ranges, including Safari media requests."""
+        file=STATIC/'assets/tentacle-web.mp4'
+        size=file.stat().st_size;start=0;end=size-1
+        requested=self.headers.get('Range')
+        if requested:
+            match=re.fullmatch(r'bytes=(\d*)-(\d*)',requested)
+            if not match or not any(match.groups()):
+                start=size
+            elif not match[1]:
+                length=int(match[2]);start=max(0,size-length) if length else size
+            else:
+                start=int(match[1]);end=min(size-1,int(match[2])) if match[2] else size-1
+            if start>=size or start>end:
+                self.send_response(416);self.send_header('Content-Range','bytes */'+str(size));self.send_header('Content-Length','0');self.end_headers();return
+        self.send_response(206 if requested else 200)
+        self.send_header('Content-Type','video/mp4');self.send_header('Accept-Ranges','bytes')
+        self.send_header('Content-Length',str(end-start+1));self.send_header('Cache-Control','no-cache')
+        if requested:self.send_header('Content-Range','bytes '+str(start)+'-'+str(end)+'/'+str(size))
+        self.end_headers()
+        try:
+            with file.open('rb') as stream:
+                stream.seek(start);remaining=end-start+1
+                while remaining:
+                    chunk=stream.read(min(65536,remaining))
+                    if not chunk:break
+                    self.wfile.write(chunk);remaining-=len(chunk)
+        except (BrokenPipeError,ConnectionResetError):pass
+
     def do_GET(self):
         if self.website_request(): return
         if not self.trusted_host(): return self.send(403,{'error':'Host nicht freigegeben.'})
@@ -268,8 +297,10 @@ class Handler(BaseHTTPRequestHandler):
                 except (OSError,subprocess.TimeoutExpired): ok=False
                 return self.send(200,{'docker':ok,'login':False,'kickstart':(DATA/'tools'/'kickstart.php').exists(),'domain':'vmm.test'})
             if path.startswith('/api/'): return self.send(404,{'error':'Nicht gefunden.'})
+            if path=='/assets/tentacle-web.mp4':return self.splash_video()
             files={'/':'index.html','/app.js':'app.js','/theme.js':'theme.js','/style.css':'style.css','/workspace.css':'workspace.css','/theme-toggle.css':'theme-toggle.css','/workspace.js':'workspace.js','/refinements.js':'refinements.js','/icons.js':'icons.js','/manager-ui.js':'manager-ui.js','/system-ui.js':'system-ui.js','/recycle-ui.js':'recycle-ui.js','/assets/tentacle-logo.png':'assets/tentacle-logo.png'}
             if re.fullmatch(r'/assets/bootstrap-icons/[a-z0-9-]+\.svg',path) and (STATIC/path.lstrip('/')).is_file():files[path]=path.lstrip('/')
+            files.update({'/splash.js':'splash.js','/splash.css':'splash.css'})
             if path not in files: return self.send(404,{'error':'Nicht gefunden.'})
             file=STATIC/files[path];self.send_response(200)
             self.send_header('Content-Type',{'html':'text/html; charset=utf-8','js':'text/javascript','css':'text/css','png':'image/png','svg':'image/svg+xml'}[file.suffix[1:]])

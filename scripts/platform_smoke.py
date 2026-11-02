@@ -33,7 +33,8 @@ def main():
         validate_zip(artifact)
         destination=Path(tmp)/'Fresh installation';destination.mkdir()
         with zipfile.ZipFile(artifact) as package:
-            assert 'app/static/workspace.js' in package.namelist()
+            for asset in ('app/static/workspace.js','app/static/splash.js','app/static/splash.css','app/static/assets/tentacle-web.mp4'):
+                assert asset in package.namelist(),asset
             assert not any(n.startswith(('data/','.env')) for n in package.namelist())
             package.extractall(destination)
         # Updating program files must preserve an existing installation's private data.

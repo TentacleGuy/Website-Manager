@@ -66,9 +66,10 @@ function renderProject(slug){
 
 }
 
+function openProjectDelete(p){if(jobActive(p.slug))return;const f=$('#delete-project-form');f.reset();f.dataset.project=p.slug;f.elements.confirm.placeholder=p.slug;f.querySelector('h2').textContent='Projekt löschen · '+p.slug;$('#delete-project').showModal();}
 function renderProjectOverview(p,panel){
  renderAkeebaBackups(p,panel);const tools=el('div',undefined,'extra-actions');tools.append(button('Jetzt sichern',()=>api('projects/'+p.slug+'/snapshot',{})));if(p.restore){const retry=button('Wiederherstellung fortsetzen',()=>openRetry(p));retry.disabled=jobActive(p.slug);tools.append(retry);}panel.append(el('h2','Sicherung'),tools,el('h2','Datenbank'));const database=el('div',undefined,'project-database');panel.append(database);api('projects/'+p.slug+'/database').then(data=>{if(!database.isConnected)return;for(const [key,value] of Object.entries(data)){const label=el('label',key);label.append(copyField(String(value),key));database.append(label);}}).catch(message);
- const remove=button('Projekt löschen',()=>{const f=$('#delete-project-form');f.reset();f.dataset.project=p.slug;f.elements.confirm.placeholder=p.slug;$('#delete-project').showModal();},'danger');remove.disabled=jobActive(p.slug);panel.append(el('hr'),remove);
+ const remove=button('Projekt löschen',()=>openProjectDelete(p),'danger');remove.disabled=jobActive(p.slug);panel.append(el('hr'),remove);
 }
 function renderPackages(){
  const box=$('#packages');box.replaceChildren();for(const p of packages){const row=el('div',undefined,'row'),text=el('div');text.append(el('strong',p.cms+' '+p.version),el('small',(p.size/1024/1024).toFixed(1)+' MB · SHA-256 '+p.sha256));row.append(text,el('span','Archiviert','badge'));box.append(row);}if(!packages.length)empty(box,'Noch keine Installationspakete gespeichert.');

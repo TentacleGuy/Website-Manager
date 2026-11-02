@@ -1,0 +1,13 @@
+dialog.startup-splash{position:fixed;inset:0;width:min(880px,calc(100vw - 32px));max-width:none;max-height:calc(100dvh - 32px);margin:auto;padding:0;border:1px solid var(--line);border-radius:22px;overflow:auto;background:var(--surface);color:var(--text);box-shadow:0 28px 100px #0008}
+.startup-splash::backdrop{background:rgba(8,5,15,.82);backdrop-filter:blur(5px)}
+.splash-frame{position:relative;background:#000;overflow:hidden;border-radius:21px 21px 0 0}
+.splash-frame video{display:block;width:100%;height:auto;aspect-ratio:16/9;max-height:calc(100dvh - 160px);object-fit:contain;min-height:160px;pointer-events:none}
+.startup-splash .splash-close{position:absolute;z-index:2;top:12px;right:12px;display:grid;place-items:center;width:36px;height:36px;padding:0;border:1px solid #ffffff50;border-radius:50%;background:#100b20cc;color:#fff;font-size:27px;line-height:1}
+.startup-splash .splash-close:disabled{opacity:.4;cursor:not-allowed}
+.startup-splash .splash-start{position:absolute;inset:0;margin:auto;width:max-content;max-width:90%;height:max-content;padding:14px 22px;border-radius:12px;background:var(--surface);color:var(--text);box-shadow:0 4px 24px #0008}
+.splash-start[hidden]{display:none}
+.splash-footer{padding:18px 24px 20px}
+.splash-footer label{margin:0;display:flex;align-items:center;gap:9px}
+.splash-footer input{width:auto;margin:0;accent-color:var(--accent)}
+.splash-status{margin:10px 0 0;color:var(--muted);font-size:12px}
+@media(max-width:540px){dialog.startup-splash{width:calc(100vw - 20px);border-radius:16px}.splash-frame{border-radius:15px 15px 0 0}.splash-footer{padding:16px}.splash-frame video{max-height:calc(100dvh - 180px)}}

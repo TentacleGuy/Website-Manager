@@ -6,6 +6,16 @@ Alle wesentlichen Änderungen am Website Manager werden hier dokumentiert. Neue 
 
 Noch keine Änderungen.
 
+## [2.0.1] - 2026-11-02
+
+### Neu
+
+- Startvideo mit Ton in einem abgedunkelten Modal mit gerundeten Ecken. Schließen per Kreuz oder Escape nach Ende des Videos; die standardmäßig aktive Wiedergabe beim nächsten Start lässt sich direkt darunter oder unter System → Startvideo für den jeweiligen Browser einstellen. Blockiert der Browser Autoplay mit Ton, startet ein Klick die Wiedergabe. Bei einem Ladefehler bleibt der Manager zugänglich.
+
+### Behoben
+
+- Projektlöschung wieder direkt in der Projektliste über ein Papierkorb-Icon erreichbar. Die Bestätigung mit Projektnamen und der Schutz bei laufenden Vorgängen bleiben erhalten.
+
 ## [2.0.0] - 2026-11-02
 
 ### Neu

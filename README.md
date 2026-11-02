@@ -246,3 +246,12 @@ Der **Dateimanager** zeigt alle gespeicherten Pakete und Archive in einer Liste.
 Unter **System → Löschen & Papierkorb** kann zwischen direkter endgültiger Löschung und vorherigem Verschieben in den Papierkorb gewählt werden. Voreinstellung für gespeicherte Pakete und Archive ist **Papierkorb mit 30 Tagen Aufbewahrung**. Die Aufbewahrung kann auf 1–3650 Tage gesetzt werden. Sie gilt für künftige Löschungen; bereits vorhandene Einträge behalten ihr angezeigtes Ablaufdatum. Abgelaufene Einträge werden bei laufendem Manager ungefähr minütlich geprüft und im Hintergrund endgültig entfernt. Die Bereinigung wartet laufende Aufgaben ab und wird im Activity Log protokolliert. Bei beendetem Manager erfolgt sie nach dem nächsten Start.
 
 Pakete und Archive bleiben im Papierkorb als versteckte Dateien im jeweiligen Speicherbereich, damit auch getrennte Laufwerke ohne umfangreiche Kopie unterstützt werden. Die zugehörigen Metadaten liegen in der Manager-Datenbank. Beim Umstellen von Speicherorten werden diese Dateien ebenfalls mitkopiert. Der normale Projektlöschvorgang legt weiterhin zuerst eine Projektsicherung im Projektpapierkorb an. Vorhandene Projektpapierkörbe werden beim Einführen dieser Funktion mit einer neuen vollen Aufbewahrungsfrist übernommen und deshalb nicht rückwirkend sofort gelöscht.
+
+
+## Startvideo
+
+Beim Öffnen des Managers erscheint das Startvideo mit Ton in einem abgedunkelten Modal mit gerundeten Ecken. Die Wiedergabe ist standardmäßig aktiviert. Unter dem Video legt **Beim nächsten Start abspielen** fest, ob es beim nächsten Öffnen wieder erscheint. Dieselbe Auswahl steht unter **System → Startvideo** zur Verfügung; **Startvideo ansehen** öffnet die Vorschau auch bei deaktiviertem Startvideo. Die Auswahl wird für den jeweiligen Browser gespeichert.
+
+Das Video hat keine Bedienelemente. Erst nach dem Ende lässt sich das Fenster über das Kreuz oben rechts oder Escape schließen. Blockiert der Browser Autoplay mit Ton, startet ein Klick auf **Video mit Ton starten** die Wiedergabe. Bei einem Lade- oder Wiedergabefehler wird das Schließen freigegeben.
+
+Verfügbar ab Version 2.0.1. In der Projektliste öffnet das Papierkorb-Icon den bestehenden Dialog zur Projektlöschung; der Projektname muss bestätigt werden.
