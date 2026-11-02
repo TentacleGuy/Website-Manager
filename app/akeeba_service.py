@@ -14,7 +14,8 @@ def capability(p):
     if p.get('storage')=='legacy':return {'available':False,'reason':'Dieses ältere Volume-Projekt zuerst auf gemeinsame Laufzeiten umstellen.'}
     if p['cms']=='joomla':
         if (site/'cli/akeeba-backup.php').is_file() and not (site/'administrator/components/com_akeebabackup').is_dir():
-            return {'available':False,'reason':'Hier ist die ältere Akeeba-Version für Joomla 3 installiert. Deren CLI wird vom Manager noch nicht unterstützt. Ein Backup ist weiterhin im Joomla-Backend unter Komponenten → Akeeba Backup möglich.'}
+            ready=(site/'administrator/components/com_akeeba/version.php').is_file() and (site/'libraries/fof40/Cli/Application.php').is_file() and (site/'configuration.php').is_file()
+            return {'available':ready,'driver':'joomla-legacy','reason':'' if ready else 'Die ältere Akeeba-Installation für Joomla 3 ist unvollständig. Bitte im Joomla-Backend prüfen.'}
         ready=(site/'administrator/components/com_akeebabackup/src/CliCommands/BackupTake.php').is_file() and (site/'cli/joomla.php').is_file()
         return {'available':ready,'reason':'' if ready else 'Akeeba Backup mit Joomla-CLI-Unterstützung installieren. Das Akeeba-Konsolenplugin muss aktiviert sein.'}
     plugins=site/'wp-content/plugins'
@@ -52,12 +53,13 @@ def json_records(raw):
     raise ValueError('Akeeba hat keinen lesbaren Sicherungsstatus geliefert.')
 
 
-def create(name,profile=1):
+def create(name,profile=1,verify=False):
     import operations as op
     p=project(name);available=capability(p)
     if not available['available']:raise ValueError(available['reason'])
     if p.get('restore') or p['status']!='running':raise ValueError('Das vollständig eingerichtete Projekt zuerst starten.')
     if isinstance(profile,bool) or not isinstance(profile,int) or not 1<=profile<=99999:raise ValueError('Eine gültige Akeeba-Profilnummer angeben.')
+    if not isinstance(verify,bool):raise ValueError('Ungültige Einstellung für die Wiederherstellungsprobe.')
     op.write_tools(p)
     ident=secrets.token_hex(12);description='VMM-'+ident;filename='vmm-'+name+'-'+ident
     root=DATA/'backups';root.mkdir(exist_ok=True)
@@ -78,12 +80,20 @@ def create(name,profile=1):
         params='--overrides='+','.join(k+'='+v for k,v in overrides.items())
         if p['cms']=='joomla':base=['php','-d','auto_prepend_file=/vmm-tools/akeeba-local.php','cli/joomla.php'];take=['akeeba:backup:take'];query=['akeeba:backup:list']
         else:base=['php','-d','auto_prepend_file=/vmm-tools/akeeba-local.php','/usr/local/bin/wp','--allow-root'];take=['akeeba','backup','take'];query=['akeeba','backup','list']
-        op.exec_php(p,base+take+['--profile='+str(profile),'--description='+description,params],timeout=7200,allowed_returncodes=(0,2))
+        legacy=available.get('driver')=='joomla-legacy'
+        if legacy:
+            shutil.copyfile(Path(__file__).parent/'tools/akeeba-legacy-status.php',tools/'akeeba-legacy-status.php')
+            take_command=['php','-d','auto_prepend_file=/vmm-tools/akeeba-local.php','cli/akeeba-backup.php','--profile='+str(profile),'--description='+description]+['--override='+k+'='+v for k,v in overrides.items()]
+        else:take_command=base+take+['--profile='+str(profile),'--description='+description,params]
+        op.exec_php(p,take_command,timeout=7200,allowed_returncodes=(0,2))
         if required:
             try:seen=json.loads(report.read_text())
             except (OSError,ValueError):seen={}
             if any(not seen.get(name) for name in required):raise ValueError('Akeeba hat nicht alle ursprünglichen Serverdateien gesichert. Bitte Datei-Ausschlüsse im Profil prüfen. Das Archiv wird nicht als vollständig angeboten.')
-        rows=json_records(op.exec_php(p,base+query+['--description='+description,'--format=json'],timeout=120))
+        if legacy:
+            raw=op.exec_php(p,['php','/vmm-tools/akeeba-legacy-status.php'],input=json.dumps({'description':description,'profile':profile}).encode(),timeout=120)
+        else:raw=op.exec_php(p,base+query+['--description='+description,'--format=json'],timeout=120)
+        rows=json_records(raw)
         record=next((r for r in rows if r.get('description')==description and r.get('status')=='complete'),None)
         if not record:raise ValueError('Akeeba hat die Sicherung nicht als vollständig abgeschlossen bestätigt. Dateien bleiben als unvollständige Sicherung zur Diagnose erhalten.')
         main=stage/(filename+'.jpa')
@@ -98,4 +108,8 @@ def create(name,profile=1):
     except Exception:
         metadata.write_text(json.dumps({'project':name,'created':int(time.time()),'profile':profile,'status':'error','files':[]}))
         raise
+    if verify:
+        from verification_service import run
+        try:run('backup',ident,p['php'],completed_backup=True)
+        except Exception as e:raise ValueError('Das Akeeba-Backup wurde erstellt und bleibt erhalten; die Wiederherstellungsprobe ist fehlgeschlagen: '+str(e)) from None
     return 'Akeeba-Backup erstellt: '+filename+'.jpa · '+str(len(names))+' Archivteile. Download im Projekt unter Akeeba-Backups.'

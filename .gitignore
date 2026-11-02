@@ -19,3 +19,5 @@ infra/Corefile
 infra/compose.gateway.yaml
 infra/dynamic/warmup.yaml
 infra/dynamic/protocols.yaml
+
+tests/

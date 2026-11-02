@@ -93,6 +93,11 @@ def job(resource, kind, fn):
         except (OSError,ValueError):updating=False
         if updating:raise ValueError('Manager-Update läuft. Bitte den Abschluss abwarten.')
         if busy():raise ValueError('Die Speicherorte werden gerade umgestellt. Bitte den Abschluss abwarten.')
+        import sys
+        service_control=sys.modules.get('system_service')
+        if service_control and service_control.SHUTTING_DOWN:raise ValueError('Der Manager wird beendet oder neu gestartet.')
+        if resource!='system-services' and c.execute("SELECT 1 FROM jobs WHERE resource='system-services' AND kind='service-control' AND status IN ('queued','running')").fetchone():raise ValueError('Bitte die laufende Dienstaktion abwarten.')
+        if resource=='system-services' and kind=='service-control' and c.execute("SELECT 1 FROM jobs WHERE resource!='system-services' AND status IN ('queued','running')").fetchone():raise ValueError('Bitte die laufenden Aufgaben zuerst abschließen oder beenden.')
         if c.execute("SELECT 1 FROM jobs WHERE resource=? AND status IN ('queued','running')", (resource,)).fetchone():
             raise ValueError('Für diesen Eintrag läuft bereits ein Vorgang.')
         ident = secrets.token_hex(12)

@@ -13,14 +13,16 @@ def detect(site):
         content=(site/'wp-includes/version.php').read_text(errors='replace')
         match=re.search(r"\$wp_version\s*=\s*['\"]([^'\"]+)",content)
         return 'wordpress',match[1] if match else 'Backup'
-    for path in ('administrator/manifests/files/joomla.xml','libraries/src/Version.php','libraries/cms/version/version.php'):
+    for path in ('libraries/src/Version.php','libraries/cms/version/version.php','administrator/manifests/files/joomla.xml'):
         file=site/path
         if not file.is_file():continue
         text=file.read_text(errors='replace');match=re.search(r'<version>([^<]+)</version>',text)
         if match:return 'joomla',match[1]
         major=re.search(r"(?:MAJOR_VERSION\s*=|\$RELEASE\s*=)\s*['\"]?([\d.]+)",text)
         minor=re.search(r'MINOR_VERSION\s*=\s*(\d+)',text);patch=re.search(r'PATCH_VERSION\s*=\s*(\d+)',text)
-        if major:return 'joomla','.'.join([major[1]]+([minor[1],patch[1]] if minor and patch else []))
+        if major:
+            legacy=re.search(r"\$DEV_LEVEL\s*=\s*['\"]([^'\"]+)",text)
+            return 'joomla','.'.join([major[1]]+([minor[1],patch[1]] if minor and patch else [legacy[1]] if legacy else []))
     return 'joomla','Backup'
 
 

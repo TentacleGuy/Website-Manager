@@ -62,6 +62,8 @@ def installation_status():
                 stream.seek(max(0,log.stat().st_size-16000));value['log']=redact(stream.read().decode(errors='replace'))
     if value.get('status') in ('queued','running'):
         value['waiting']=time.time()-value.get('time',time.time())>90
+    value['historical']=value.get('status') not in ('queued','running')
+    value['installed_version']=RELEASE['version']
     return value
 
 

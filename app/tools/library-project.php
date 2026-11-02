@@ -89,11 +89,13 @@ try {
     define('JPATH_BASE',getenv('VMM_PROJECT_ROOT') ?: getcwd());
     require JPATH_BASE.'/includes/defines.php';
     require JPATH_BASE.'/includes/framework.php';
+    if(method_exists(\Joomla\CMS\Factory::class,'getContainer')) {
     $container=\Joomla\CMS\Factory::getContainer();
     $container->alias('session','session.cli')->alias('JSession','session.cli')->alias(\Joomla\CMS\Session\Session::class,'session.cli')->alias(\Joomla\Session\Session::class,'session.cli')->alias(\Joomla\Session\SessionInterface::class,'session.cli');
     $app=$container->get(\Joomla\Console\Application::class);
     \Joomla\CMS\Factory::$application=$app;
     $db=$container->get(\Joomla\Database\DatabaseInterface::class);
+    } else {$app=JFactory::getApplication('administrator');$db=JFactory::getDbo();}
     $db->setQuery("SELECT e.extension_id,e.name,e.element,e.type,e.manifest_cache,s.location,s.extra_query FROM #__extensions e LEFT JOIN #__update_sites_extensions x ON x.extension_id=e.extension_id LEFT JOIN #__update_sites s ON s.update_site_id=x.update_site_id AND s.enabled=1 WHERE e.protected=0 AND e.type IN ('component','package','plugin','template') ORDER BY e.name");
     $rows=[];
     foreach ($db->loadAssocList() as $r) {

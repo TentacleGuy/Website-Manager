@@ -11,13 +11,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
+      - run: python scripts/changelog.py
+        env:
+          CHANGELOG_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
       - run: pip install -r requirements.txt
       - run: python -m unittest discover -s tests -v
       - run: php -l app/tools/restore-backup.php
       - run: node --check app/static/app.js
+      - run: node --check app/static/manager-ui.js
+      - run: node --check app/static/system-ui.js
+      - run: node --check app/static/recycle-ui.js
+      - run: node --check app/static/icons.js
       - run: python scripts/build_release.py
   release:
     if: startsWith(github.ref, 'refs/tags/v')
@@ -34,7 +43,7 @@ jobs:
         env:
           RELEASE_TAG: ${{ github.ref_name }}
       - name: Publish verified packages
-        run: gh release create "$RELEASE_TAG" dist/*.zip dist/*.sha256 --verify-tag --generate-notes --title "Website Manager $RELEASE_TAG"
+        run: gh release create "$RELEASE_TAG" dist/*.zip dist/*.sha256 CHANGELOG.md --verify-tag --notes-file dist/release-notes.md --title "Website Manager $RELEASE_TAG"
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.ref_name }}

@@ -7,10 +7,13 @@ import zipfile
 from build_windows_installer import ROOT,source_files,build as windows
 from build_macos_installer import build as macos
 from build_linux_installer import build as linux
+from changelog import validate as validate_changelog,notes as release_notes
 
 
-def build(root=ROOT):
+def build(root=ROOT,tag=None):
+    validate_changelog(root,tag=tag)
     output=root/'dist';output.mkdir(exist_ok=True)
+    (output/'release-notes.md').write_text(release_notes(root,tag=tag),encoding='utf-8')
     update=output/'manager-update.zip'
     with zipfile.ZipFile(update,'w',zipfile.ZIP_DEFLATED) as archive:
         for path in source_files(root):
@@ -25,4 +28,4 @@ if __name__=='__main__':
     parser=argparse.ArgumentParser();parser.add_argument('--tag');args=parser.parse_args()
     metadata=json.loads((ROOT/'app/release.json').read_text())
     if args.tag and args.tag!='v'+metadata['version']:raise SystemExit('Git-Tag und app/release.json stimmen nicht überein.')
-    print(build())
+    print(build(tag=args.tag))

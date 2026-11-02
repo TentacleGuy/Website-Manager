@@ -2,6 +2,10 @@
 
 Lokaler Projektmanager für Joomla und WordPress mit gemeinsamen Docker-Laufzeiten, Akeeba-Import, Erweiterungsverwaltung und Manager-Updates über GitHub-Releases.
 
+## Änderungsprotokoll
+
+Alle veröffentlichten Versionen und die noch unveröffentlichten Änderungen stehen in [CHANGELOG.md](CHANGELOG.md). Das Protokoll wird bei relevanten Änderungen mitgepflegt; GitHub-Versionshinweise werden bei der Veröffentlichung daraus erzeugt.
+
 ## Installation
 
 Unter [Releases](https://github.com/TentacleGuy/Website-Manager/releases) das Setup für macOS, Windows oder Linux laden und entpacken:
@@ -154,14 +158,15 @@ Falls unter Windows ein älterer Updatehelfer mit `apply.py: No such file or dir
 
 ### Ein Release veröffentlichen
 
-1. `app/release.json` auf die neue Version setzen.
-2. Änderungen testen und nach `main` übertragen.
-3. Ein passendes Tag wie `v1.0.1` erstellen und pushen.
+1. Änderungen im selben Arbeitsschritt unter **Unveröffentlicht** in `CHANGELOG.md` dokumentieren.
+2. Für das Release diese Einträge in einen neuen Abschnitt mit Version und Datum übernehmen; unter **Unveröffentlicht** anschließend `Noch keine Änderungen.` eintragen und `app/release.json` angleichen.
+3. `python3 scripts/changelog.py --tag vX.Y.Z` und die Tests ausführen; Änderungen nach `main` übertragen.
+4. Das passende Tag `vX.Y.Z` erstellen und pushen.
 
-Der GitHub-Workflow führt Tests und Syntaxprüfungen aus und erstellt anschließend ein Release mit `manager-update.zip`, Prüfsumme und den Setup-Paketen für Windows, macOS und Linux. Tag und eingetragene Version müssen übereinstimmen. Für einen lokalen Paketbau:
+Der GitHub-Workflow führt Tests und Syntaxprüfungen aus und erstellt anschließend ein Release mit `manager-update.zip`, Prüfsumme und den Setup-Paketen für Windows, macOS und Linux. Tag, eingetragene Version und Changelog müssen übereinstimmen. Fehlende Einträge oder noch nicht versionierte Änderungen verhindern die Veröffentlichung. Programmänderungen ohne Änderung an der Changelog werden in der GitHub-Prüfung beanstandet. Die Versionshinweise werden als `dist/release-notes.md` aus dem passenden Eintrag erzeugt und für das GitHub-Release verwendet. Die vollständige `CHANGELOG.md` wird ebenfalls als Release-Datei beigefügt. Für einen lokalen Paketbau:
 
 ```sh
-python3 scripts/build_release.py --tag v1.2.0
+python3 scripts/build_release.py --tag vX.Y.Z
 ```
 
 Die Paketbauer verwenden eine explizite Dateiliste. Lokale Projekte, `.env`, Datenbanken, Backups, Exporte, Zertifikate und Zugangsdaten sind ausgeschlossen. Kickstart wird zur Laufzeit von Akeeba geladen und nicht mitveröffentlicht.
@@ -191,3 +196,49 @@ Der Browser kann beim ersten Öffnen nach einer Bestätigung fragen. Die Anbindu
 Beim Akeeba-Import erhält der Manager vorhandene `.htaccess`, `.user.ini` und `php.ini` als `.vmm-original`. War eine `.htaccess` vorhanden, wird die mitgelieferte `htaccess.txt` (alternativ `.htaccess.txt`) zur lokalen `.htaccess` umbenannt. Ohne vorherige `.htaccess` wird keine Vorlage aktiviert. Fehlt die Vorlage, bleibt das Original gesichert und wird nicht ungeprüft lokal aktiviert.
 
 Akeeba-Backups über den Manager ordnen diese Originaldateien direkt beim Schreiben des JPA-Archivs wieder den ursprünglichen Namen zu. Die lokale `.htaccess` erhält dabei ihren Vorlagennamen zurück; `.vmm-original`-Doppeldateien landen nicht im Archiv. Die laufende Website wird während des Backups nicht umbenannt oder auf Produktionsregeln umgestellt. Das gilt auch für vorhandene `.vmm-original`-Dateien aus älteren Importen. Unterordner bleiben unverändert. Ein Backup wird nur als vollständig angeboten, wenn Akeeba die erwarteten Serverdateien nachweislich aufgenommen hat; ausschließende Profilfilter führen zu einer verständlichen Fehlermeldung. Auch ZIP-Projektsicherungen verwenden diese ursprünglichen Dateinamen und erhalten die lokale htaccess-Vorlage unter ihrem Vorlagennamen.
+
+## Arbeitsbereiche und gespeicherte Dateien
+
+Projekte stehen in einer spaltenweise filter- und sortierbaren Tabelle. Erweiterungen verwenden eine Auswahlliste mit Detailbereich. In Projekten sind Sicherungen, Zugänge und Laufzeiteinstellungen getrennte Bereiche. Die regelmäßige Aktualisierung lädt nur Daten der geöffneten Ansicht; im Hintergrund pausiert sie. Abgeschlossene Updatefehler stehen im Updateverlauf getrennt von der installierten Manager-Version.
+
+Erweiterungen lassen sich vollständig aus der Bibliothek entfernen oder einzelne gespeicherte ZIP-Versionen löschen. Das CMS-Archiv bietet dieselbe Möglichkeit für Installationspakete. Unter **Backups** können Akeeba-Archive einschließlich aller Teilarchive, ZIP-Projektsicherungen sowie unter **Weitere Downloads** Kickstart-Dateien, ältere Manager-Downloads, Projektpapierkörbe und verbliebene Löschdateien entfernt werden. Vor der endgültigen Löschung zeigt der Dialog Umfang und Zuordnungen. Aktive Einrichtungen, Wiederherstellungen, Prüfungen und Downloads schützen benötigte Dateien. Bereits installierte Websites bleiben beim Löschen ihrer Bibliothekspakete erhalten.
+
+### Projektprüfungen und Wiederherstellung
+
+Die erste Prüfung nach dem Start und danach höchstens einmal innerhalb von 24 Stunden prüft laufende Projekte auf Erreichbarkeit und Updates. Der Aufgabenbereich zeigt Startzeit, Fortschritt und die laufenden Schritte. Die Projektprüfung kann nach dem aktuellen Schritt beendet werden. Schreibende Sicherungs- und Installationsvorgänge werden vollständig abgeschlossen.
+
+Die Erweiterungsliste zeigt den zuletzt gespeicherten Stand; „Updates prüfen“ lädt ihn gezielt neu. Updates stehen zuerst, Joomla-Core-Erweiterungen können getrennt gefiltert werden. Die Projektübersicht zeigt die erkannte CMS-Version und den bekannten Updatezustand.
+
+Unter Backups stehen Projektsicherungen und Akeeba-Archive nebeneinander. „Wiederherstellen“ spielt ein ZIP mit Website und Datenbank in einen neuen Projektnamen ein; vorhandene Projekte werden nicht überschrieben. Der SQL-Import verwendet das eingeschränkte Konto dieses neuen Projekts. Technische Downloads und der Projektpapierkorb sind unter System → Speicherorte erreichbar. Gespeicherte Erweiterungspakete bleiben in der Erweiterungsbibliothek.
+
+Ein Standardbenutzer wird nur im Manager gespeichert. „Backend“ verwendet diesen Benutzer, „Login →“ den gewählten Benutzer. Dazu wird ein 60 Sekunden gültiger Einmal-Link erstellt; vorhandene CMS-Passwörter werden nicht verändert. Der letzte Administrator und der gewählte Standardbenutzer sind vor versehentlicher Löschung geschützt. Bei WordPress werden Inhalte beim Löschen einem verbleibenden Benutzer zugeordnet.
+
+### Plattformprüfungen
+
+`python scripts/platform_smoke.py` baut Installations- und Updatepakete in einem temporären Verzeichnis, prüft Prüfsummen sowie Pfade mit Leerzeichen und den Erhalt privater Daten beim Entpacken eines Updates. Der Workflow `platform-smoke.yml` führt dies unter Windows, Linux und macOS aus; hinzu kommen Updatehelfer-Tests, JavaScript-Prüfungen und die Windows-PowerShell-Syntaxprüfung. Die vollständige lokale Testsuite startet mit `python -m unittest discover -s tests`.
+
+## Dateimanager und Zeitpläne
+
+Der Dateimanager bündelt gespeicherte CMS- und Erweiterungspakete, Akeeba-Archive, ZIP-Projektsicherungen, Kickstart-Dateien, Manager-Downloads und Projektpapierkörbe. Such- und Typfilter sowie Dateidetails helfen beim Verwalten. Löschungen verwenden dieselben Schutzprüfungen wie die Bibliothek. Bei mehrteiligen Backups wird die gesamte Sicherungsgruppe entfernt.
+
+Unter Aufgaben lassen sich tägliche und wöchentliche Projektprüfungen und Projektsicherungen mit Uhrzeit, Zeitzone und Projektauswahl anlegen, bearbeiten, pausieren und manuell starten. Die tägliche Projektprüfung ist vorbelegt. Der Manager muss zur Ausführung laufen; ein verpasster Termin wird beim nächsten Start einmal nachgeholt. Während eines laufenden Projektschritts beendet ein Abbruch zunächst diesen Schritt, damit keine unvollständigen Sicherungen entstehen.
+
+Speicherorte werden beim Öffnen des Reiters geladen; ihre Größenberechnung läuft im Hintergrund. Ein Klick auf ein Pfadfeld verwendet die registrierte lokale Desktop-Anbindung für den normalen Ordnerdialog. macOS verwendet den Systemdialog, Windows den FolderBrowserDialog, Linux zenity oder kdialog. Gegebenenfalls den Manager einmal über seine lokale Starten-Datei starten. Der ausgewählte Pfad ändert nur das Formular. Erst Prüfen und Anwenden führen eine Speicherumstellung aus. Eine manuelle Pfadeingabe bleibt verfügbar.
+
+
+### Dienste und Berechtigungen
+
+Unter **System → Dienste & Rechte** prüft der Manager seine Docker-Anbindung, das interne Netzwerk, den Zustand der eigenen Dienste und den Zugriff auf alle Speicherbereiche. Für jeden Speicherbereich wird eine kleine temporäre Datei geschrieben, gelesen und entfernt. Bei laufenden PHP-Diensten werden zusätzlich die Dateirechte des PHP-Benutzers für die aktiven Projektordner geprüft. Das ist keine vollständige Prüfung jeder Datei einer Website.
+
+Die eigenen Dienste können gestartet, neu gestartet und beendet werden. Laufende Aufgaben und Dateiübertragungen verhindern das Beenden benötigter Dienste. Ein bewusst gestopptes PHP startet bei einem erneuten Website-Aufruf wieder bei Bedarf. Fehlende Gateway-/DNS-Container richtet die lokale **Starten**-Datei ein. Ein Manager-Neustart unterbricht kurz die Oberfläche; nach dem Beenden muss der Manager über die lokale **Starten**-Datei gestartet werden. Docker Engine bzw. Docker Desktop selbst lassen sich aus einem beendeten Manager nicht steuern.
+
+**Ordnerfreigabe anfragen** testet die lokale Ordneranbindung und öffnet den nativen Auswahldialog. Der Test verändert keine Speicherorte. **Ordneranbindung erneut einrichten** erneuert die vorhandene Registrierung für den aktuellen Benutzer und öffnet denselben Dialog. Fehlt die Registrierung vollständig, muss zuerst die lokale **Starten**-Datei ausgeführt werden. Die Anbindung läuft nur bei Bedarf; sie ist kein Hintergrunddienst. Finder/Explorer lassen sich aus einer gewöhnlichen Website nicht auf allen Betriebssystemen allein mit einem Link öffnen. Abgelehnte Browser- oder Betriebssystemfreigaben können nicht aus der Website zwangsweise zurückgesetzt werden; Hinweise stehen direkt in der Oberfläche.
+
+
+### Dateimanager und Papierkorb
+
+Der **Dateimanager** zeigt alle gespeicherten Pakete und Archive in einer Liste. Die Suche über der Liste berücksichtigt alle angezeigten Spalten; über die Spaltenüberschriften kann sortiert werden. Im Reiter **Papierkorb** lassen sich Dateien wiederherstellen oder nach Bestätigung endgültig entfernen. Wiederherstellen überschreibt keine inzwischen vorhandenen Dateien und stellt die gespeicherten Bibliotheksdaten wieder her. Bereits gelöschte Projekte können unter ihrem ursprünglichen Namen wiederhergestellt werden und erscheinen anschließend gestoppt im Manager. Die aufbewahrte Projektdatenbank wird wiederverwendet; falls sie fehlt, wird der gesicherte SQL-Export eingespielt. Projekte mit verknüpften Dateien werden zur manuellen Prüfung angehalten.
+
+Unter **System → Löschen & Papierkorb** kann zwischen direkter endgültiger Löschung und vorherigem Verschieben in den Papierkorb gewählt werden. Voreinstellung für gespeicherte Pakete und Archive ist **Papierkorb mit 30 Tagen Aufbewahrung**. Die Aufbewahrung kann auf 1–3650 Tage gesetzt werden. Sie gilt für künftige Löschungen; bereits vorhandene Einträge behalten ihr angezeigtes Ablaufdatum. Abgelaufene Einträge werden bei laufendem Manager ungefähr minütlich geprüft und im Hintergrund endgültig entfernt. Die Bereinigung wartet laufende Aufgaben ab und wird im Activity Log protokolliert. Bei beendetem Manager erfolgt sie nach dem nächsten Start.
+
+Pakete und Archive bleiben im Papierkorb als versteckte Dateien im jeweiligen Speicherbereich, damit auch getrennte Laufwerke ohne umfangreiche Kopie unterstützt werden. Die zugehörigen Metadaten liegen in der Manager-Datenbank. Beim Umstellen von Speicherorten werden diese Dateien ebenfalls mitkopiert. Der normale Projektlöschvorgang legt weiterhin zuerst eine Projektsicherung im Projektpapierkorb an. Vorhandene Projektpapierkörbe werden beim Einführen dieser Funktion mit einer neuen vollen Aufbewahrungsfrist übernommen und deshalb nicht rückwirkend sofort gelöscht.

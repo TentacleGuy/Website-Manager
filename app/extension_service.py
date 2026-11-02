@@ -359,6 +359,17 @@ def installed(name):
         for kind in ('plugin','theme'):
             raw=op.exec_php(p,['wp','--allow-root',kind,'list','--format=json'],timeout=90)
             for x in json.loads(raw):result.append({'name':x['name'],'element':x['name'],'kind':kind,'version':x['version'],'enabled':x['status'] in ('active','must-use','dropin'),'update':x.get('update',''),'available':x.get('update_version','')})
+        # Core updates are separate from plugin/theme updates in WP-CLI.
+        core={'name':'WordPress','element':'wordpress','kind':'core','core':True,'version':p.get('version',''),'enabled':True,'update':'unknown','available':''}
+        try:
+            updates=json.loads(op.exec_php(p,['wp','--allow-root','core','check-update','--format=json'],timeout=90,allowed_returncodes=(0,1)))
+            if not isinstance(updates,list):raise ValueError('WordPress lieferte keinen lesbaren CMS-Updatestand.')
+            available=next((x for x in updates if x.get('version')),None)
+            core.update(update='available' if available else 'none',available=available['version'] if available else '')
+        except Exception as exc:
+            from store import redact
+            core['check_error']=redact(str(exc))
+        result.insert(0,core)
         save_inventory(name,result)
         return result
     result=json.loads(op.exec_php(p,['php','/vmm-tools/extension-bridge.php','inventory'],timeout=90))
@@ -400,6 +411,28 @@ def install_plan(name,source_id):
     except Exception as exc:
         with db() as c:c.execute("UPDATE extension_plans SET status='error',error=? WHERE project=? AND source=?",(str(exc),name,source_id))
         raise
+
+
+def install_stored(name,ident):
+    """Install precisely the uploaded library artifact, without resolving a newer release."""
+    import operations as op
+    p=project(name)
+    if not ready(p):raise ValueError('Zuerst CMS-Einrichtung bzw. Wiederherstellung abschließen und Projekt starten.')
+    with db() as c:
+        row=c.execute('SELECT * FROM extensions WHERE id=? AND archived=1',(ident,)).fetchone()
+        if not row or row['cms']!=p['cms']:raise ValueError('Gespeichertes Paket passt nicht zum CMS.')
+        item=dict(row)
+        previous=c.execute('SELECT license FROM extension_plans WHERE project=? AND source=?',(name,item['source_id'])).fetchone() if item['source_id'] else None
+    s=source(item['source_id']) if item['source_id'] else None
+    license_id=(previous['license'] if previous else s.get('license','') if s else '') or ''
+    if s:license_value(license_id,s['provider'],name,s['id'])
+    result=op.install_extension(name,ident)
+    if s:
+        configure_license(p,s,license_id)
+        assign(name,[{'source':s['id'],'license':license_id,'version':item['version']}])
+        with db() as c:c.execute("UPDATE extension_plans SET status='installed',error=NULL WHERE project=? AND source=?",(name,s['id']))
+    with db() as c:c.execute("INSERT OR REPLACE INTO project_extensions VALUES (?,?,?,'installed')",(name,ident,license_id or None))
+    return result or item['name']+' installiert.'
 
 
 def process_pending(name):

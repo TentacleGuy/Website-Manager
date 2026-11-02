@@ -1,0 +1,39 @@
+name: Platform installation and update smoke tests
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+env:
+  PYTHONUTF8: "1"
+permissions:
+  contents: read
+jobs:
+  portable:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - run: pip install -r requirements.txt
+      - run: python scripts/platform_smoke.py
+      - run: node --check app/static/app.js
+      - run: node --check app/static/manager-ui.js
+      - run: node --check app/static/system-ui.js
+      - run: node --check app/static/recycle-ui.js
+      - run: node --check app/static/icons.js
+      - run: node --check app/static/workspace.js
+      - if: runner.os != 'Windows'
+        run: python -m unittest discover -s tests
+      - if: runner.os == 'Windows'
+        run: python -m unittest discover -s tests -p test_backup_updates.py
+      - if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./tests/validate_windows_installer.ps1

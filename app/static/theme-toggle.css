@@ -1,0 +1,30 @@
+/* Sun/moon morph inspired by https://web.dev/articles/building/a-theme-switch-component.
+   Geometry, motion and colors are local; no fonts, scripts or styles are loaded remotely. */
+.theme-control,.workspace-layout .theme-control{
+  justify-content:flex-start;gap:0;margin:20px 0 0;padding:0;border:0;
+}
+.aside-bottom,.workspace-layout .aside-bottom{padding:0;width:100%}
+#theme-toggle{
+  display:grid;place-items:center;flex:0 0 auto;width:44px;height:44px;min-height:44px;
+  padding:10px;margin:0;border:1px solid transparent;border-radius:50%;
+  color:var(--accent-text);background:transparent;box-shadow:none;transform:none;
+  touch-action:manipulation;transition:background-color .18s,border-color .18s;
+}
+#theme-toggle:hover{color:var(--accent-text);background:var(--accent-soft);border-color:transparent}
+#theme-toggle:active{background:var(--hover)}
+#theme-toggle .theme-symbol{display:block;width:24px;height:24px;overflow:visible;pointer-events:none}
+#theme-toggle .theme-disc,#theme-toggle .theme-rays{transform-origin:12px 12px}
+#theme-toggle .theme-disc{fill:currentColor;transform:scale(1)}
+#theme-toggle .theme-rays{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;opacity:1;transform:rotate(0deg)}
+#theme-toggle .theme-cutout{transform:translateX(0)}
+:root[data-theme="dark"] #theme-toggle .theme-disc{transform:scale(1.65)}
+:root[data-theme="dark"] #theme-toggle .theme-rays{opacity:0;transform:rotate(-25deg)}
+:root[data-theme="dark"] #theme-toggle .theme-cutout{transform:translateX(-7px)}
+@media(prefers-reduced-motion:no-preference){
+  #theme-toggle .theme-disc{transition:transform .42s cubic-bezier(.22,1.2,.36,1)}
+  #theme-toggle .theme-rays{transition:transform .45s cubic-bezier(.22,1.2,.36,1),opacity .2s ease}
+  #theme-toggle .theme-cutout{transition:transform .35s cubic-bezier(.4,0,.2,1)}
+  :root[data-theme="dark"] #theme-toggle .theme-disc{transition-duration:.25s;transition-timing-function:ease-out}
+}
+@media(prefers-reduced-motion:reduce){#theme-toggle,#theme-toggle *{transition:none!important}}
+@media(max-width:700px){.theme-control,.workspace-layout .theme-control{justify-content:flex-start;margin:16px 0 0;padding:0}}

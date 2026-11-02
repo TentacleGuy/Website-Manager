@@ -30,7 +30,7 @@ if (!function_exists('get_option')) {
             $manifest=json_decode($r['manifest_cache'],true) ?: [];
 
             if(isset($updates[$r['extension_id']]) && !version_compare($updates[$r['extension_id']],$manifest['version'] ?? '0','>'))unset($updates[$r['extension_id']]);
-            $items[]=['id'=>(int)$r['extension_id'],'name'=>$r['name'],'element'=>$r['element'],'kind'=>$r['kind'],'folder'=>$r['folder'],'version'=>$manifest['version'] ?? '', 'enabled'=>(bool)$r['enabled'],'update'=>isset($updates[$r['extension_id']])?'available':'unknown','available'=>$updates[$r['extension_id']] ?? ''];
+            $items[]=['protected'=>(bool)$r['protected'],'author'=>$manifest['author']??'','id'=>(int)$r['extension_id'],'name'=>$r['name'],'element'=>$r['element'],'kind'=>$r['kind'],'folder'=>$r['folder'],'version'=>$manifest['version'] ?? '', 'enabled'=>(bool)$r['enabled'],'update'=>isset($updates[$r['extension_id']])?'available':'unknown','available'=>$updates[$r['extension_id']] ?? ''];
         }
         echo json_encode($items);exit;
     }

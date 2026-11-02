@@ -135,3 +135,24 @@ def download(cms,v):
                 out.write(chunk)
         register(path,cms,v,row['url'])
     return 'Installationspaket dauerhaft archiviert.'
+
+
+def identify_package(path,expected_cms):
+    """Detect the CMS version in a package without executing its PHP."""
+    valid_cms(expected_cms);validate_zip(path)
+    with zipfile.ZipFile(path) as archive:
+        names=archive.namelist()
+        candidates=[n for n in names if n.endswith('wp-includes/version.php')] if expected_cms=='wordpress' else [n for n in names if n.endswith(('libraries/src/Version.php','libraries/cms/version/version.php','administrator/manifests/files/joomla.xml'))]
+        candidates.sort(key=lambda n:(0 if n.endswith('libraries/src/Version.php') else 1,len(n)))
+        for name in candidates:
+            if archive.getinfo(name).file_size>1024*1024:continue
+            text=archive.read(name).decode('utf-8',errors='replace')
+            if expected_cms=='wordpress':match=re.search(r"\$wp_version\s*=\s*['\"]([^'\"]+)",text)
+            else:
+                values=[re.search(key+r"\s*=\s*['\"]?([0-9]+)",text) for key in ('MAJOR_VERSION','MINOR_VERSION','PATCH_VERSION')]
+                if all(values):return '.'.join(x[1] for x in values)
+                match=re.search(r'<version>([^<]+)</version>',text)
+                legacy=re.search(r"\$RELEASE\s*=\s*['\"]([^'\"]+)",text);patch=re.search(r"\$DEV_LEVEL\s*=\s*['\"]([^'\"]+)",text)
+                if legacy and patch:return legacy[1]+'.'+patch[1]
+            if match:return version(match[1])
+    raise ValueError('CMS und Version konnten im ZIP nicht erkannt werden. Bitte ein vollständiges '+expected_cms.title()+'-Installationspaket auswählen.')

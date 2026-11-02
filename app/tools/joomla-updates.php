@@ -2,6 +2,16 @@
 /** Bridge to Joomla's native installer model; no parallel update implementation. */
 define('_JEXEC', 1);
 define('JPATH_BASE', getenv('VMM_PROJECT_ROOT') ?: '/var/www/html');
+if(is_file(JPATH_BASE.'/configuration.php') && !is_file(JPATH_BASE.'/cli/joomla.php')) {
+    require_once JPATH_BASE.'/includes/defines.php';require_once JPATH_BASE.'/includes/framework.php';
+    JFactory::getApplication('administrator');
+    JModelLegacy::addIncludePath(JPATH_ADMINISTRATOR.'/components/com_installer/models','InstallerModel');
+    $model=JModelLegacy::getInstance('Update','InstallerModel',['ignore_request'=>true]);
+    $model->purge();$model->findUpdates();$model->setState('list.limit',0);
+    foreach($model->getItems() as $item)echo $item->name.': '.$item->version."\n";
+    if(in_array('--apply',$argv,true)){fwrite(STDERR,"Updates dieser Joomla-3-Installation bitte im CMS-Backend installieren.\n");exit(2);}
+    exit;
+}
 if (!is_file(JPATH_BASE.'/configuration.php') || !is_file(JPATH_BASE.'/cli/joomla.php')) {
     fwrite(STDERR, "Zuerst Joomla installieren. Diese Aktion benötigt Joomla 4 oder neuer.\n"); exit(2);
 }

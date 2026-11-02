@@ -34,7 +34,7 @@ def provision(name,admin=None):
 
 def user_action(name,body):
     p=project(name)
-    if body.get('action') not in ('list','create','reset'):raise ValueError('Unbekannte Benutzeraktion.')
+    if body.get('action') not in ('list','create','reset','delete'):raise ValueError('Unbekannte Benutzeraktion.')
     op.write_tools(p)
     if p['cms']=='wordpress':
         if body['action']=='list':return json.loads(op.exec_php(p,['wp','--allow-root','user','list','--fields=ID,user_login,user_email,display_name,roles','--format=json']))
@@ -45,13 +45,15 @@ def user_action(name,body):
         else:args=['user','update',str(int(body['id'])),'--prompt=user_pass']
         op.exec_php(p,['wp','--allow-root',*args],input=(values['password']+'\n').encode())
     else:
-        values=admin_settings(body) if body['action']!='list' else {}
+        values=admin_settings(body) if body['action'] in ('create','reset') else {}
         payload={**values,**body}
         result=op.exec_php(p,['php','/vmm-tools/cms-users.php'],input=json.dumps(payload).encode())
         if body['action']=='list':return json.loads(result)
+        if body['action']=='delete':return {'ok':True}
     from credentials import change,listing
     existing=next((entry for entry in listing(name) if entry.get('username')==values['username'] and not entry.get('archived')),None)
     change(name,{'id':existing['id'] if existing else None,'label':existing['label'] if existing else 'CMS Benutzer · '+values['username'],'username':values['username'],'password':values['password'],'note':values['email'],'url':'http://'+name+'.vmm.test:'+str(op.ports(p['php'])[0])+('/administrator/' if p['cms']=='joomla' else '/wp-admin/')})
+    __import__('project_workspace').invalidate_users(name)
     return {'ok':True}
 
 

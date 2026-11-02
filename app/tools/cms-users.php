@@ -6,12 +6,13 @@ define('_JEXEC',1);define('JPATH_BASE',getenv('VMM_PROJECT_ROOT')?:'/var/www/htm
 ob_start();require JPATH_BASE.'/includes/defines.php';require JPATH_BASE.'/includes/framework.php';ob_end_clean();
 $modern=method_exists(\Joomla\CMS\Factory::class,'getContainer');
 $db=$modern?\Joomla\CMS\Factory::getContainer()->get(\Joomla\Database\DatabaseInterface::class):\JFactory::getDbo();
-if ($v['action']==='list') {$db->setQuery('SELECT id AS ID,username AS user_login,email AS user_email,name AS display_name FROM #__users ORDER BY id');echo json_encode($db->loadAssocList());exit;}
+if ($v['action']==='list') {$db->setQuery('SELECT id AS ID,username AS user_login,email AS user_email,name AS display_name,block FROM #__users ORDER BY id');echo json_encode($db->loadAssocList());exit;}
 if ($modern) {
  $c=\Joomla\CMS\Factory::getContainer();$c->alias('session','session.cli')->alias(\Joomla\Session\SessionInterface::class,'session.cli');
  \Joomla\CMS\Factory::$application=$c->get(\Joomla\Console\Application::class);
  \Joomla\CMS\Factory::$application->createExtensionNamespaceMap();
 }
+if($v['action']==='delete'){$u=new \Joomla\CMS\User\User((int)$v['id']);if($u->authorise('core.admin')){$db->setQuery('SELECT id FROM #__users WHERE block=0');$other=false;foreach($db->loadColumn() as $id){if((int)$id!==(int)$u->id && (new \Joomla\CMS\User\User((int)$id))->authorise('core.admin')){$other=true;break;}}if(!$other)throw new RuntimeException('Der letzte Super-Administrator kann nicht gelöscht werden.');}if(!$u->id || !$u->delete())throw new RuntimeException('Benutzer konnte nicht gelöscht werden.');echo '{"ok":true}';exit;}
 $user=new \Joomla\CMS\User\User($v['action']==='reset'?(int)$v['id']:0);
 if ($v['action']==='reset') {if (!$user->id)throw new RuntimeException('Benutzer nicht gefunden.');$user->password=\Joomla\CMS\User\UserHelper::hashPassword($v['password']);}
 else {

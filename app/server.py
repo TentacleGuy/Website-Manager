@@ -11,7 +11,7 @@ import threading
 import time
 import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlparse, unquote, parse_qs
+from urllib.parse import urlparse, unquote, parse_qs, quote
 from catalog import valid_cms, version, register, download, sync, digest, validate_zip
 from runtime import PHP, ports, slug, project_links
 from store import DATA, LOCK, db, records, project, job, cipher
@@ -125,6 +125,35 @@ class Handler(BaseHTTPRequestHandler):
                     if not value['available']:raise ValueError(value['reason'])
                     content=value['path'].encode('utf-8');self.send_response(200);self.send_header('Content-Type','text/plain; charset=utf-8');self.send_header('Content-Length',str(len(content)));self.send_header('Cache-Control','no-store');self.end_headers();self.wfile.write(content);return
                 return self.send(200,value)
+            cleanup=re.fullmatch(r'/api/cleanup/(cms|extension|extension-package|backup|export|kickstart|manager-download|trash|residue|recycle)/([^/]+)',path)
+            if cleanup:
+                import cleanup_service
+                return self.send(200,cleanup_service.review(*cleanup.groups()))
+            workspace=re.fullmatch(r'/api/projects/([a-z][a-z0-9-]{0,39})/(cached-inventory|akeeba-profiles|default-user)',path)
+            if workspace:
+                import project_workspace as w
+                name,action=workspace.groups()
+                return self.send(200,w.cache(name) if action=='cached-inventory' else w.profiles(name) if action=='akeeba-profiles' else {'id':w.default_user(name)})
+            cached_users=re.fullmatch(r'/api/projects/([a-z][a-z0-9-]{0,39})/cached-users',path)
+            if cached_users:return self.send(200,__import__('project_workspace').users(cached_users[1]))
+            picker=re.fullmatch(r'/api/folder-picker/([a-f0-9]{32})',path)
+            if picker:return self.send(200,__import__('folder_picker').result(picker[1]))
+            files_request=re.fullmatch(r'/api/files/([a-z-]+)/([^/]+)(?:/(.+))?',path)
+            if files_request:
+                import file_service
+                kind,ident,relative=files_request.groups();ident=unquote(ident)
+                if relative is None:return self.send(200,file_service.entries(kind,ident))
+                file=file_service.file(kind,ident,unquote(relative))
+                self.send_response(200);self.send_header('Content-Type','application/octet-stream');self.send_header('Content-Length',str(file.stat().st_size));self.send_header('Content-Disposition',"attachment; filename*=UTF-8''"+quote(file.name));self.end_headers()
+                with file.open('rb') as stream:shutil.copyfileobj(stream,self.wfile)
+                return
+            if path=='/api/system-services':return self.send(200,__import__('system_service').status())
+            if path=='/api/schedules':return self.send(200,{'tasks':__import__('schedule_service').listing()})
+            if path=='/api/recycle':return self.send(200,__import__('recycle_service').listing())
+            if path=='/api/deletion-settings':return self.send(200,__import__('recycle_service').settings())
+            if path=='/api/cleanup':
+                import cleanup_service
+                return self.send(200,cleanup_service.inventory())
             if path=='/api/storage':
                 import storage_service
                 return self.send(200,storage_service.status())
@@ -161,7 +190,7 @@ class Handler(BaseHTTPRequestHandler):
                 import environment_service
                 from database_profiles import profile,listing
                 return self.send(200,{**environment_service.saved_report(DATA),'existing_database':profile({'database_profile':'existing'}),'database_profiles':listing()})
-            if path=='/api/projects': return self.send(200,{'projects':[{**public(p),**project_links(dict(p),DATA/'projects'/p['slug']),'extension_status':extensions.inventory_summary(p['slug']),'folder':desktop_service.folder(p)} for p in records('projects')],'php':PHP})
+            if path=='/api/projects': return self.send(200,{'projects':[{**public(p),**project_links(dict(p),DATA/'projects'/p['slug']),'extension_status':extensions.inventory_summary(p['slug']),'folder':desktop_service.folder(p)} for p in __import__('project_workspace').project_rows()],'php':PHP})
             if re.fullmatch(r'/api/projects/[a-z][a-z0-9-]{0,39}/credentials',path):
                 return self.send(200,{'credentials':credential_list(slug(path.split('/')[3]))})
             if path=='/api/packages':
@@ -239,10 +268,11 @@ class Handler(BaseHTTPRequestHandler):
                 except (OSError,subprocess.TimeoutExpired): ok=False
                 return self.send(200,{'docker':ok,'login':False,'kickstart':(DATA/'tools'/'kickstart.php').exists(),'domain':'vmm.test'})
             if path.startswith('/api/'): return self.send(404,{'error':'Nicht gefunden.'})
-            files={'/':'index.html','/app.js':'app.js','/theme.js':'theme.js','/style.css':'style.css','/assets/tentacle-logo.png':'assets/tentacle-logo.png'}
+            files={'/':'index.html','/app.js':'app.js','/theme.js':'theme.js','/style.css':'style.css','/workspace.css':'workspace.css','/theme-toggle.css':'theme-toggle.css','/workspace.js':'workspace.js','/refinements.js':'refinements.js','/icons.js':'icons.js','/manager-ui.js':'manager-ui.js','/system-ui.js':'system-ui.js','/recycle-ui.js':'recycle-ui.js','/assets/tentacle-logo.png':'assets/tentacle-logo.png'}
+            if re.fullmatch(r'/assets/bootstrap-icons/[a-z0-9-]+\.svg',path) and (STATIC/path.lstrip('/')).is_file():files[path]=path.lstrip('/')
             if path not in files: return self.send(404,{'error':'Nicht gefunden.'})
             file=STATIC/files[path];self.send_response(200)
-            self.send_header('Content-Type',{'html':'text/html; charset=utf-8','js':'text/javascript','css':'text/css','png':'image/png'}[file.suffix[1:]])
+            self.send_header('Content-Type',{'html':'text/html; charset=utf-8','js':'text/javascript','css':'text/css','png':'image/png','svg':'image/svg+xml'}[file.suffix[1:]])
             self.send_header('Cache-Control','no-cache')
             self.send_header('Content-Security-Policy',"default-src 'self'; style-src 'self'; script-src 'self'; frame-ancestors 'none'; base-uri 'none'")
             self.end_headers();self.wfile.write(file.read_bytes())
@@ -261,8 +291,14 @@ class Handler(BaseHTTPRequestHandler):
                     out.write(chunk);remaining-=len(chunk)
             query=parse_qs(urlparse(self.path).query)
             if path=='/api/uploads/packages':
-                ident=register(file,query.get('cms',[''])[0],query.get('version',[''])[0],'manual')
-                return self.send(201,{'id':ident})
+                cms=query.get('cms',[''])[0]
+                from catalog import identify_package
+                try:detected=identify_package(file,cms)
+                except ValueError:
+                    detected=query.get('version',[''])[0]
+                    if not detected:raise
+                ident=register(file,cms,detected,'manual')
+                return self.send(201,{'id':ident,'cms':cms,'version':detected})
             if path=='/api/uploads/extensions':
                 import extension_library
                 return self.send(201,extension_library.upload(file))
@@ -291,6 +327,9 @@ class Handler(BaseHTTPRequestHandler):
             if length<0: raise ValueError('Ungültige Anfragegröße.')
             path=urlparse(self.path).path
             import storage_service
+            if __import__('system_service').SHUTTING_DOWN:raise ValueError('Der Manager wird beendet oder neu gestartet.')
+            with db() as c:
+                if c.execute("SELECT 1 FROM jobs WHERE resource='system-services' AND kind='service-control' AND status IN ('queued','running')").fetchone():raise ValueError('Bitte die laufende Dienstaktion abwarten.')
             if storage_service.busy():raise ValueError('Die Speicherorte werden gerade umgestellt. Bitte den Abschluss abwarten.')
             if path.startswith('/api/uploads/'):
                 if length>MAX_UPLOAD: return self.send(413,{'error':'Datei zu groß (max. 4 GB pro Teil).'})
@@ -301,34 +340,50 @@ class Handler(BaseHTTPRequestHandler):
                 finally:
                     with LOCK:storage_service.ACTIVE_UPLOADS-=1
             if length>16384: return self.send(413,{'error':'Anfrage zu groß.'})
+            picker_callback=re.fullmatch(r'/api/folder-picker/([a-f0-9]{32})/complete',path)
+            if picker_callback:
+                return self.send(200,__import__('folder_picker').complete(picker_callback[1],self.rfile.read(length).decode('utf-8')))
             body=json.loads(self.rfile.read(length) or '{}')
             if not isinstance(body,dict): raise ValueError('JSON-Objekt erwartet.')
+            if path=='/api/deletion-settings':return self.send(200,__import__('recycle_service').save_settings(body))
+            recycle=re.fullmatch(r'/api/recycle/([a-f0-9]{24})/(restore|purge)',path)
+            if recycle:
+                import recycle_service as bin
+                ident,action=recycle.groups()
+                return self.send(202,{'job':job('recycle-bin','recycle-purge',lambda:bin.purge(ident))}) if action=='purge' else self.send(200,bin.restore(ident))
+            if path=='/api/system-services/check':return self.send(202,{'job':job('system-services','service-check',__import__('system_service').check)})
+            if path=='/api/system-services/control':return self.send(202,__import__('system_service').request(body))
+            if path=='/api/folder-picker':return self.send(201,__import__('folder_picker').create(body.get('mode','choose')))
+            if path=='/api/schedules':return self.send(201,__import__('schedule_service').save(body))
+            schedule=re.fullmatch(r'/api/schedules/([a-z0-9-]+)/(delete|run|cancel)',path)
+            if schedule:
+                import schedule_service as schedules
+                ident,action=schedule.groups()
+                return self.send(200,schedules.delete(ident) if action=='delete' else schedules.cancel(ident) if action=='cancel' else schedules.start(ident))
+            if path=='/api/project-checks':
+                import project_workspace as w
+                if body.get('action')=='cancel':w.CANCEL.set();return self.send(200,{'message':'Abbruch angefordert; der aktuelle Prüfschritt wird noch beendet.'})
+                return self.send(202,{'job':job('project-checks','project-checks',w.scan)})
+            if path=='/api/restore-export':
+                import project_workspace as w
+                return self.send(202,w.restore_export(body['file'],body['slug']))
+            account=re.fullmatch(r'/api/projects/([a-z][a-z0-9-]{0,39})/account',path)
+            if account:return self.send(200,__import__('project_workspace').account(account[1],body))
+            if path=='/api/verification':
+                import verification_service
+                return self.send(202,verification_service.start(body.get('kind'),body.get('id'),body.get('php')))
             if path=='/api/storage/check':return self.send(200,storage_service.check(body.get('paths')))
             if path=='/api/storage/apply':return self.send(202,storage_service.start(body.get('paths')))
+            cleanup=re.fullmatch(r'/api/cleanup/(cms|extension|extension-package|backup|export|kickstart|manager-download|trash|residue|recycle)/([^/]+)/delete',path)
+            if cleanup:
+                import cleanup_service
+                return self.send(200,cleanup_service.remove(*cleanup.groups()))
             if path=='/api/jobs/delete':
                 import activity_service
                 return self.send(200,activity_service.delete_before(body.get('before')))
             if re.fullmatch(r'/api/backups/[a-f0-9]{24}/delete',path):
-                group=path.split('/')[3]
-                with LOCK, db() as c:
-                    if c.execute('SELECT 1 FROM projects WHERE backup_group=? AND restore=1',(group,)).fetchone():
-                        raise ValueError('Dieses Backup wird für eine laufende oder fortsetzbare Wiederherstellung benötigt.')
-                    folder=DATA/'backups'/group
-                    if folder.is_symlink() or not folder.is_dir():raise ValueError('Backup nicht gefunden.')
-                    meta=folder/'manager-backup.json'
-                    if meta.exists() and json.loads(meta.read_text()).get('status')=='creating':raise ValueError('Die Sicherung wird noch erstellt.')
-                    shutil.rmtree(folder)
-                return self.send(200,{'message':'Backup einschließlich aller Teilarchive gelöscht.'})
-            if path=='/api/exports/delete':
-                name=body.get('name','')
-                if not isinstance(name,str) or not re.fullmatch(r'[a-z0-9-]+\.zip',name):raise ValueError('Ungültiger Dateiname.')
-                with LOCK, db() as c:
-                    if c.execute("SELECT 1 FROM jobs WHERE status IN ('queued','running') AND kind IN ('snapshot','update-all','install-extension','extensions')").fetchone():
-                        raise ValueError('Bitte die laufende Sicherung oder Erweiterungsinstallation abwarten.')
-                    file=DATA/'exports'/name
-                    if file.is_symlink() or not file.is_file():raise ValueError('Sicherung nicht gefunden.')
-                    file.unlink()
-                return self.send(200,{'message':'Projektsicherung gelöscht.'})
+                return self.send(200,__import__('cleanup_service').remove('backup',path.split('/')[3]))
+            if path=='/api/exports/delete':return self.send(200,__import__('cleanup_service').remove('export',body.get('name','')))
             if path.startswith('/api/runtimes/'):
                 from shared_operations import runtime_transition
                 version=path.split('/')[-1];ports(version);action=body.get('action')
@@ -369,7 +424,10 @@ class Handler(BaseHTTPRequestHandler):
                 import extension_library
                 group,ident,action=library_action.groups()
                 if group=='sources' and action=='edit':return self.send(200,extension_library.edit(ident,body))
-                if group=='packages' and action=='delete':return self.send(200,extension_library.delete_package(ident))
+                if group=='sources' and action=='delete':
+                    import cleanup_service
+                    return self.send(200,cleanup_service.remove('extension',ident))
+                if group=='packages' and action=='delete':return self.send(200,__import__('cleanup_service').remove('extension-package',ident))
                 raise ValueError('Ungültige Bibliotheksaktion.')
             library_project=re.fullmatch(r'/api/projects/([a-z][a-z0-9-]{0,39})/(library-import|extension-key)',path)
             if library_project:
@@ -391,6 +449,13 @@ class Handler(BaseHTTPRequestHandler):
             parts=path.strip('/').split('/')
             if len(parts)==4 and parts[:2]==['api','projects']:
                 name=slug(parts[2]);action=parts[3];p=project(name)
+                if action=='refresh-users':return self.send(200,__import__('project_workspace').users(name,refresh=True))
+                if action=='install-package':
+                    if not extensions.ready(p):raise ValueError('Zuerst das Projekt starten und die CMS-Einrichtung abschließen.')
+                    ident=body.get('extension')
+                    with db() as c:package=c.execute('SELECT cms FROM extensions WHERE id=? AND archived=1',(ident,)).fetchone()
+                    if not package or package['cms']!=p['cms']:raise ValueError('Gespeichertes Paket passt nicht zum CMS.')
+                    return self.send(202,{'job':job(name,'install-extension',lambda:extensions.install_stored(name,ident))})
                 if action=='extensions':
                     items=extensions.validate_plans(p['cms'],body.get('extensions',[]),name)
                     if body.get('install') and not extensions.ready(p):raise ValueError('Zuerst die CMS-Einrichtung abschließen.')
@@ -420,7 +485,7 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send(202,{'job':job(name,'akeeba',lambda:restore_akeeba(name,group,archive,password))})
                 if action=='akeeba-backup':
                     import akeeba_service
-                    return self.send(202,{'job':job(name,action,lambda:akeeba_service.create(name,body.get('profile',1)))})
+                    return self.send(202,{'job':job(name,action,lambda:akeeba_service.create(name,body.get('profile',1),body.get('verify',False)))})
                 if action=='snapshot': return self.send(202,{'job':job(name,action,lambda:snapshot(name))})
                 if action=='finalize': return self.send(202,{'job':job(name,action,lambda:finalize_restore(name))})
                 if action=='update-extension':
@@ -447,7 +512,12 @@ class Handler(BaseHTTPRequestHandler):
         except (ValueError,TypeError,KeyError,RuntimeError,OSError,zipfile.BadZipFile) as e: self.send(400,{'error':str(e)})
 
 if __name__=='__main__':
+    import project_workspace
+    threading.Thread(target=__import__('recycle_service').monitor,daemon=True).start()
+    threading.Thread(target=__import__('schedule_service').monitor,daemon=True).start()
     threading.Thread(target=monitor,daemon=True).start()
     import update_service
     threading.Thread(target=update_service.monitor,daemon=True).start()
+    import verification_service
+    threading.Thread(target=verification_service.recover_interrupted,daemon=True).start()
     ThreadingHTTPServer((os.environ.get('VMM_LISTEN','127.0.0.1'),8090),Handler).serve_forever()

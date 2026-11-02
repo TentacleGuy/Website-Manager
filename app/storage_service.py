@@ -10,6 +10,8 @@ from storage_paths import AREAS,ENV_KEYS,host_location,settings,validate_paths
 from store import DATA,LOCK,db
 
 _USAGE={}
+_USAGE_BUSY=threading.Event()
+_USAGE_LOCK=threading.Lock()
 ACTIVE_UPLOADS=0
 
 
@@ -24,17 +26,27 @@ def busy():
     return bool(state and state.get('status') in ('queued','running') and time.time()-state.get('time',0)<7200)
 
 
+def measure_usage():
+    try:
+        for key in AREAS:
+            path=DATA/key
+            try:used=sum(p.stat().st_size for p in path.rglob('*') if p.is_file() and not p.is_symlink())
+            except OSError:continue
+            _USAGE[str(path)]=(time.time(),used)
+    finally:_USAGE_BUSY.clear()
+
+
 def status():
-    base=os.environ.get('VMM_HOST_DATA',str(DATA));saved=settings();areas=[]
+    base=os.environ.get('VMM_HOST_DATA',str(DATA));saved=settings();areas=[];stale=False
     for key,label in AREAS.items():
         path=DATA/key;path.mkdir(exist_ok=True)
-        cached=_USAGE.get(str(path))
-        if not cached or time.time()-cached[0]>60:
-            used=sum(p.stat().st_size for p in path.rglob('*') if p.is_file() and not p.is_symlink())
-            cached=(time.time(),used);_USAGE[str(path)]=cached
+        cached=_USAGE.get(str(path));stale=stale or not cached or time.time()-cached[0]>300
         usage=shutil.disk_usage(path)
-        areas.append({'key':key,'label':label,'path':saved.get(key,base.rstrip('/')+'/'+key),'default':base.rstrip('/')+'/'+key,'used':cached[1],'free':usage.free})
-    return {'areas':areas,'migration':migration_status(),'database':'Datenbanken bleiben in ihren bisherigen Docker-Volumes. Zugangsdaten, Zertifikate und Manager-Metadaten bleiben im Manager-Datenordner.'}
+        areas.append({'key':key,'label':label,'path':saved.get(key,base.rstrip('/')+'/'+key),'default':base.rstrip('/')+'/'+key,'used':cached[1] if cached else None,'free':usage.free})
+    with _USAGE_LOCK:
+        if stale and not _USAGE_BUSY.is_set():
+            _USAGE_BUSY.set();threading.Thread(target=measure_usage,daemon=True).start()
+    return {'areas':areas,'migration':migration_status(),'measuring':_USAGE_BUSY.is_set(),'database':'Datenbanken bleiben in ihren bisherigen Docker-Volumes. Zugangsdaten, Zertifikate und Manager-Metadaten bleiben im Manager-Datenordner.'}
 
 
 def prepare(paths):
