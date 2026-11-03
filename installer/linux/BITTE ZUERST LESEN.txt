@@ -6,7 +6,7 @@ Eine entfernte Docker-Verbindung ist fuer lokale Projektdateien nicht geeignet.
 
 ZIP vollstaendig entpacken und bash Installieren.sh ausfuehren.
 Die Installation liegt standardmaessig unter ~/.local/share/Tentacle/WebsiteManager.
-VMM_INSTALL_DIR kann einen eigenen Installationsordner vorgeben.
+TENTACLE_INSTALL_DIR kann einen eigenen Installationsordner vorgeben.
 
 Vorhandenes Docker wird verwendet. Es werden keine Host-Datenbanken ersetzt.
 Datenbanken entstehen erst beim Anlegen eines Projekts, mit eigenem Versionsprofil.

@@ -11,7 +11,7 @@ seine Herstellersignatur geprueft. Docker kann einen Neustart oder Zustimmung
 zu seinen Bedingungen benoetigen.
 
 Standardordner: %LOCALAPPDATA%\Tentacle\WebsiteManager
-VMM_INSTALL_DIR kann einen eigenen Installationsordner vorgeben.
+TENTACLE_INSTALL_DIR kann einen eigenen Installationsordner vorgeben.
 Ein erneuter Setup-Aufruf erkennt die bestehende Installation; Projekte,
 Datenbanken, Zusatzwerte in .env und Zertifikate bleiben erhalten.
 

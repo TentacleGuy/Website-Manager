@@ -1,4 +1,5 @@
 """Restore a copy into disposable containers on an internal network without host ports."""
+from config_env import config_env
 import hashlib
 import json
 import os
@@ -54,8 +55,8 @@ def run(kind,ident,php=None,completed_backup=False):
     if blocked:raise ValueError(' '.join(blocked))
     token=secrets.token_hex(12);stage=DATA/'verification/runs'/token;site=stage/'site';tools=stage/'tools'
     site.mkdir(parents=True);site.chmod(0o777);tools.mkdir()
-    host=host_path(os.environ.get('VMM_HOST_DATA',str(DATA)))+'/verification/runs/'+token
-    network='vmm-verify-'+token;database=network+'-db';web=network+'-php'
+    host=host_path(config_env('HOST_DATA',str(DATA)))+'/verification/runs/'+token
+    network='tentacle-verify-'+token;database=network+'-db';web=network+'-php'
     value={'id':token,'kind':kind,'source':ident,'status':'running','created':int(time.time()),'message':'Wiederherstellungskopie wird vorbereitet.','containers':[database,web],'network':network}
     metadata={}
     def report(message,**fields):
@@ -84,11 +85,11 @@ def run(kind,ident,php=None,completed_backup=False):
                 if Path(name).name!=name or path.is_symlink() or not path.is_file() or op.digest(path)!=digest:raise ValueError('Archiv-Prüfsumme stimmt nicht. Originaldatei wurde nicht verändert.')
             php=php or associated.get('php') or '8.4'
             if php not in PHP:raise ValueError('Eine unterstützte PHP-Version auswählen.')
-            execute(['docker','image','inspect','vmm-php:'+php],timeout=15)
+            execute(['docker','image','inspect','tentacle-php:'+php],timeout=15)
             import kickstart_service
             kickstart=kickstart_service.ensure('auto',php)
             report('Akeeba-Archiv wird in eine getrennte Testkopie entpackt.')
-            execute(['docker','run','--rm','--network','none','--cap-drop','ALL','--security-opt','no-new-privileges','--mount','type=bind,source='+host+'/site,target=/restore','--mount','type=bind,source='+host_location('backups')+'/'+ident+',target=/input,readonly','--mount','type=bind,source='+host+'/tools,target=/vmm-tools,readonly','--mount','type=bind,source='+host_path(os.environ.get('VMM_HOST_DATA',str(DATA)))+'/tools/'+kickstart.relative_to(DATA/'tools').as_posix()+',target=/kickstart.php,readonly','vmm-php:'+php,'php','-d','auto_prepend_file=','/kickstart.php','/input/'+archive,'/restore','--silent'],timeout=1800)
+            execute(['docker','run','--rm','--network','none','--cap-drop','ALL','--security-opt','no-new-privileges','--mount','type=bind,source='+host+'/site,target=/restore','--mount','type=bind,source='+host_location('backups')+'/'+ident+',target=/input,readonly','--mount','type=bind,source='+host+'/tools,target=/vmm-tools,readonly','--mount','type=bind,source='+host_path(config_env('HOST_DATA',str(DATA)))+'/tools/'+kickstart.relative_to(DATA/'tools').as_posix()+',target=/kickstart.php,readonly','tentacle-php:'+php,'php','-d','auto_prepend_file=','/kickstart.php','/input/'+archive,'/restore','--silent'],timeout=1800)
         else:
             if not re.fullmatch(r'[a-z0-9][a-z0-9._-]*\.zip',ident):raise ValueError('Ungültige Projektsicherung.')
             source=DATA/'exports'/ident
@@ -103,7 +104,7 @@ def run(kind,ident,php=None,completed_backup=False):
             except (OSError,ValueError):associated={}
             php=php or associated.get('php') or '8.4'
             if php not in PHP:raise ValueError('Eine unterstützte PHP-Version auswählen.')
-            execute(['docker','image','inspect','vmm-php:'+php],timeout=15)
+            execute(['docker','image','inspect','tentacle-php:'+php],timeout=15)
         for folder,dirs,files in os.walk(site):
             if Path(folder).is_symlink():raise ValueError('Verknüpfungen sind in Wiederherstellungsproben nicht erlaubt.')
             Path(folder).chmod(0o777)
@@ -131,7 +132,7 @@ def run(kind,ident,php=None,completed_backup=False):
             try:execute(['docker','exec',database,'sh','-c','exec '+admin+' ping -h127.0.0.1 -uroot -p"$'+prefix+'_ROOT_PASSWORD" --silent'],timeout=5);ready=True;break
             except RuntimeError:time.sleep(1)
         if not ready:raise ValueError('Die isolierte Testdatenbank ist nicht gestartet.')
-        execute(['docker','run','--rm','-d','--name',web,'--label','vmm.verification=true','--network',network,'--memory','768m','--cpus','1','-e','VMM_VERIFICATION=1','-e','VMM_PROJECT_ROOT=/var/www/html','--mount','type=bind,source='+host+'/site,target=/var/www/html','--mount','type=bind,source='+host+'/tools,target=/vmm-tools,readonly','vmm-php:'+php],timeout=60)
+        execute(['docker','run','--rm','-d','--name',web,'--label','vmm.verification=true','--network',network,'--memory','768m','--cpus','1','-e','VMM_VERIFICATION=1','-e','VMM_PROJECT_ROOT=/var/www/html','--mount','type=bind,source='+host+'/site,target=/var/www/html','--mount','type=bind,source='+host+'/tools,target=/vmm-tools,readonly','tentacle-php:'+php],timeout=60)
         def php_command(args,**kwargs):return execute(['docker','exec','-i','-w','/var/www/html',web]+args,**kwargs)
         report('Datenbank wird ausschließlich in die Testdatenbank wiederhergestellt.')
         if kind=='backup':
@@ -186,7 +187,7 @@ def recover_interrupted():
         if kind not in ('backup','export') or not isinstance(ident,str):continue
         with db() as c:
             if c.execute("SELECT 1 FROM jobs WHERE resource=? AND status IN ('queued','running')",('verify-'+kind+'-'+ident,)).fetchone():continue
-        prefix='vmm-verify-'+token
+        prefix='tentacle-verify-'+token
         for name in (prefix+'-php',prefix+'-db'):
             try:op.command(['docker','rm','-f',name],timeout=15)
             except Exception:pass

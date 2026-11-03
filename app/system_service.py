@@ -1,4 +1,5 @@
 """Bounded diagnostics and lifecycle controls for manager-owned Docker services only."""
+from config_env import config_env
 import json,os,re,secrets,subprocess,threading,time
 from pathlib import Path
 from store import DATA,LOCK,db,job,redact,records
@@ -13,12 +14,12 @@ def docker(*args,timeout=15):
     return result.stdout
 
 def definitions():
-    runtime=os.environ.get('VMM_RUNTIME_PROJECT','vmm-runtime')
+    runtime=config_env('RUNTIME_PROJECT','tentacle-runtime')
     result={'gateway:traefik':('tentacle-gateway','traefik','Website-Gateway'),
             'gateway:dns':('tentacle-gateway','dns','Lokale Namensauflösung (DNS)')}
     path=DATA/'shared/compose.json'
     if path.is_file():
-        config=json.loads(path.read_text())
+        config=json.loads(path.read_text());runtime=config.get('name','vmm-runtime')
         for name in config.get('services',{}):
             if not re.fullmatch(r'(?:php\d\d|phpmyadmin|db(?:-[a-z0-9-]+)?)',name):continue
             title='PHP '+name[3]+'.'+name[4] if re.fullmatch(r'php\d\d',name) else 'phpMyAdmin' if name=='phpmyadmin' else 'Datenbank · '+name

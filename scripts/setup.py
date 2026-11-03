@@ -19,7 +19,7 @@ def generate(root,lan_ip):
     (data/'certs').mkdir(exist_ok=True)
     env=root/'.env'
     if not env.exists():
-        env.write_text('VMM_HOST_DATA='+data.as_posix()+'\nVMM_BIND=127.0.0.1\n')
+        env.write_text('TENTACLE_HOST_DATA='+data.as_posix()+'\nTENTACLE_BIND=127.0.0.1\n')
         env.chmod(0o600)
     command=['--providers.file.directory=/etc/traefik/dynamic','--providers.file.watch=true','--providers.docker=true','--providers.docker.exposedbydefault=false']
     command.append('--entrypoints.database.address=:8091')

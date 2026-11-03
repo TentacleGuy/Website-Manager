@@ -1,4 +1,5 @@
 """Lifecycle for the common stack; legacy volumes are retained for rollback."""
+from config_env import config_env
 import json
 import os
 import re
@@ -13,7 +14,27 @@ def context():
     import operations as op
     from store import DATA, records
     with LOCK:
-        path=write_config(DATA,os.environ.get('VMM_HOST_DATA',str(DATA)),records('projects'))
+        root=DATA/'shared';previous=root/'compose.json';pending=root/'rename-runtime.json'
+        target=config_env('RUNTIME_PROJECT','tentacle-runtime')
+        if previous.is_file() and not pending.exists():
+            config=json.loads(previous.read_text())
+            if not config_env('RUNTIME_PROJECT') and config.get('name','vmm-runtime') not in ('vmm-runtime','tentacle-runtime'):target=config['name']
+            if config.get('name','vmm-runtime')!=target:
+                old_args=['docker','compose','-f',str(previous),'--profile','*']
+                running=op.command(old_args+['ps','--services','--status','running'],timeout=20).decode().splitlines()
+                atomic(pending,json.dumps({'config':config,'running':running}))
+        if pending.exists():
+            migration=json.loads(pending.read_text())
+            old_file=root/'compose.before-rename.json'
+            atomic(old_file,json.dumps(migration['config']))
+            op.command(['docker','compose','-f',str(old_file),'--profile','*','down'],timeout=180)
+        path=write_config(DATA,config_env('HOST_DATA',str(DATA)),records('projects'))
+        if pending.exists():
+            running=migration['running']
+            for service in running:
+                if re.fullmatch(r'php\d\d',service):op.ensure_runtime(service[3]+'.'+service[4])
+            if running:op.command(['docker','compose','-f',str(path),'--profile','*','up','-d',*running],timeout=1800)
+            pending.unlink();old_file.unlink(missing_ok=True)
     return op,['docker','compose','-f',str(path)]
 
 
@@ -173,11 +194,18 @@ def snapshot(p):
             if paused:op.command(args+['unpause']+php)
 
 
+def runtime_project():
+    from store import DATA
+    path=DATA/'shared/compose.json'
+    if path.is_file():return json.loads(path.read_text()).get('name','vmm-runtime')
+    return config_env('RUNTIME_PROJECT','tentacle-runtime')
+
+
 def runtime_status():
     from runtime import PHP
     import operations as op
     try:
-        output=op.command(['docker','ps','--filter','label=com.docker.compose.project=vmm-runtime','--format','{{.Label "com.docker.compose.service"}}'],timeout=10).decode().splitlines()
+        output=op.command(['docker','ps','--filter','label=com.docker.compose.project='+runtime_project(),'--format','{{.Label "com.docker.compose.service"}}'],timeout=10).decode().splitlines()
     except Exception:output=[]
     return [{'php':v,'running':'php'+v.replace('.','') in output} for v in PHP]
 

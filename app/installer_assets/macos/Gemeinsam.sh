@@ -1,7 +1,7 @@
 #!/bin/bash
 # macOS ships Bash 3.2. No Homebrew or developer tools are required.
 
-INSTALL_DIR="${VMM_INSTALL_DIR:-$HOME/Library/Application Support/Tentacle/WebsiteManager}"
+INSTALL_DIR="${TENTACLE_INSTALL_DIR:-${VMM_INSTALL_DIR:-$HOME/Library/Application Support/Tentacle/WebsiteManager}}"
 DOCKER_APP=''
 DOCKER=''
 
@@ -84,7 +84,7 @@ start_manager() {
     source "$INSTALL_DIR/app/installer_assets/docker-environment.sh"
     manager_environment "$INSTALL_DIR"
     local actual
-    actual=$("$DOCKER" image inspect vmm-manager:dev --format '{{index .Config.Labels "vmm.docker.cli.image"}}' 2>/dev/null || true)
+    actual=$("$DOCKER" image inspect tentacle-manager:dev --format '{{index .Config.Labels "vmm.docker.cli.image"}}' 2>/dev/null || true)
     if [ "$actual" != "$DOCKER_CLI_IMAGE" ]; then "$DOCKER" compose -p tentacle-manager build manager;fi
     if ! "$DOCKER" network inspect vmm-gateway >/dev/null 2>&1; then
         "$DOCKER" network create vmm-gateway

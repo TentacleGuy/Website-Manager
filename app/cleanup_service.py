@@ -74,6 +74,9 @@ def describe(c,kind,ident):
         if references:blocked.append('Für eine laufende oder fortsetzbare Wiederherstellung benötigt: '+', '.join(references)+'.')
         if info.get('status')=='creating' or any(r['kind']=='akeeba-backup' and r['resource']==info.get('project') for r in active):blocked.append('Das Backup wird noch erstellt.')
         note='Das gesamte Backup einschließlich aller Teilarchive wird gelöscht. Bereits wiederhergestellte Websites bleiben erhalten.'
+        if info.get('status')=='error':
+            name=(info.get('project','')+' · ' if info.get('project') else '')+'Fehlgeschlagener Backup-Versuch'
+            note='Keine vollständige Sicherung. '+info.get('error','Details stehen im Activity Log.')
     elif kind=='export':
         if not re.fullmatch(r'[a-z0-9][a-z0-9._-]*\.zip',ident):raise ValueError('Ungültiger Dateiname.')
         file=safe_file(DATA/'exports',ident)
@@ -123,7 +126,7 @@ def describe(c,kind,ident):
     if kind in ('backup','export'):
         from verification_service import result
         verification=result(kind,ident)
-    return {'verification':verification,'kind':kind,'id':ident,'label':LABELS[kind],'name':name,'cms':cms,'size':None if kind=='trash' else sum(size(p) for p in paths),'files':len(paths),'projects':references,'note':note,'blocked':list(dict.fromkeys(blocked)),'_paths':paths}
+    return {'verification':verification,'kind':kind,'id':ident,'label':LABELS[kind],'name':name,'cms':cms,'size':None if kind=='trash' else sum(size(p) for p in paths),'files':len(paths),'projects':references,'note':note,'status':info.get('status') if kind=='backup' else None,'blocked':list(dict.fromkeys(blocked)),'_paths':paths}
 
 
 def public(value):return {k:v for k,v in value.items() if not k.startswith('_')}

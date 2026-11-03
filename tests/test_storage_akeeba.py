@@ -112,10 +112,11 @@ class AkeebaCreationTests(unittest.TestCase):
             stage=akeeba.DATA/'backups'/ident;base='vmm-'+name+'-'+ident
             if 'akeeba:backup:take' in args:
                 self.assertIn('allowed_returncodes',kwargs)
-                overrides=next(x for x in args if x.startswith('--overrides='))
-                self.assertIn('akeeba.advanced.postproc_engine=none',overrides)
-                self.assertIn('akeeba.quota.enable_count_quota=0',overrides)
-                self.assertIn('/vmm-backups/'+ident,overrides)
+                overrides=[x for x in args if x.startswith('--overrides=')]
+                self.assertIn('--overrides=akeeba.advanced.postproc_engine=none',overrides)
+                self.assertIn('--overrides=akeeba.quota.enable_count_quota=0',overrides)
+                self.assertIn('--overrides=akeeba.basic.output_directory=/vmm-backups/'+ident,overrides)
+                self.assertTrue(all(',' not in value for value in overrides))
                 (stage/(base+'.jpa')).write_bytes(b'JPA-test-native-archive');(stage/(base+'.j01')).write_bytes(b'part-one')
                 return b'Backup complete'
             return json.dumps([{'id':42,'description':'VMM-'+ident,'status':'complete','multipart':2}]).encode()
@@ -131,7 +132,7 @@ class AkeebaCreationTests(unittest.TestCase):
         site=akeeba.DATA/'projects'/name/'site';site.mkdir(parents=True,exist_ok=True)
         (site/'.htaccess').write_text('production');(site/'htaccess.txt').write_text('local')
         tools=site.parent/'tools';prepare_local(site,tools)
-        with patch('akeeba_service.capability',return_value={'available':True}),patch('akeeba_service.secrets.token_hex',return_value=ident),patch('operations.write_tools'),patch('operations.exec_php',return_value=b'Backup complete'):
+        with patch('akeeba_service.capability',return_value={'available':True}),patch('akeeba_service.secrets.token_hex',return_value=ident),patch('operations.write_tools'),patch('operations.exec_php',return_value=json.dumps([{'description':'VMM-'+ident,'status':'complete'}]).encode()):
             with self.assertRaisesRegex(ValueError,'ursprünglichen Serverdateien'):akeeba.create(name)
         self.assertEqual(json.loads((akeeba.DATA/'backups'/ident/'manager-backup.json').read_text())['status'],'error')
         self.assertEqual((site/'.htaccess').read_text(),'local');self.assertEqual((site/'.htaccess.vmm-original').read_text(),'production')
@@ -145,7 +146,13 @@ class AkeebaCreationTests(unittest.TestCase):
         def execute(p,args,**kwargs):
             if 'akeeba:backup:take' in args:
                 self.assertEqual((site/'.htaccess').read_text(),'local')
-                self.assertTrue(any('akeeba.advanced.archiver_engine=vmmjpa' in arg for arg in args))
+                # Model the CLI's repeated key=value options, rather than just
+                # searching the command string for the desired settings.
+                options=dict(arg[len('--overrides='):].split('=',1) for arg in args if arg.startswith('--overrides='))
+                self.assertEqual(options['akeeba.advanced.archiver_engine'],'vmmjpa')
+                self.assertEqual(options['akeeba.basic.output_directory'],'/vmm-backups/'+ident)
+                self.assertEqual(options['akeeba.basic.archive_name'],'vmm-'+name+'-'+ident)
+                self.assertEqual(options['akeeba.advanced.postproc_engine'],'none')
                 (tools/'akeeba-originals-report.json').write_text(json.dumps({'.htaccess':True,'htaccess.txt':True}))
                 (akeeba.DATA/'backups'/ident/('vmm-'+name+'-'+ident+'.jpa')).write_bytes(b'JPA-fixture')
                 return b'done'

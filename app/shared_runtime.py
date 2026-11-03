@@ -1,4 +1,5 @@
 """One PHP service per version, shared MariaDB and loopback-only phpMyAdmin."""
+from config_env import config_env
 import json
 import os
 import re
@@ -30,7 +31,7 @@ def stack(host_data, root_password, database_profiles=None):
             labels[base+'.priority']='10';labels[base+'.entrypoints']=entry+suffix;labels[base+'.service']=ident
             if tls:labels[base+'.tls']='true'
         labels['traefik.http.services.'+ident+'.loadbalancer.server.port']='80'
-        services['php'+suffix]={'image':'vmm-php:'+php,'profiles':['php'+suffix],
+        services['php'+suffix]={'image':'tentacle-php:'+php,'profiles':['php'+suffix],
             'volumes':[
                 project_host+':/vmm-projects',host+'/shared/apache:/etc/apache2/sites-enabled:ro',
                 host+'/shared/state:/vmm-state:ro',host+'/shared/tools:/vmm-tools:ro',
@@ -45,7 +46,7 @@ def stack(host_data, root_password, database_profiles=None):
         'entrypoint':['/bin/sh','-c','ln -sf /vmm-pma/config.php /etc/phpmyadmin/config.user.inc.php; exec /docker-entrypoint.sh "$@"','vmm'],
         'command':['apache2-foreground'],
         'networks':['default','gateway'],'labels':labels,'restart':'unless-stopped'}
-    return {'name':os.environ.get('VMM_RUNTIME_PROJECT','vmm-runtime'),'services':services,'volumes':volumes,'networks':{'gateway':{'external':True,'name':'vmm-gateway'}}}
+    return {'name':config_env('RUNTIME_PROJECT','tentacle-runtime'),'services':services,'volumes':volumes,'networks':{'gateway':{'external':True,'name':'vmm-gateway'}}}
 
 
 def atomic(path,text):
@@ -63,7 +64,17 @@ def write_config(data, host, projects):
     from database_profiles import legacy_spec
     old={**legacy_spec(data),'id':LEGACY,'volume':'database'}
     config['services']['db']=database_service(old,password)
-    atomic(root/'compose.json',json.dumps(config,indent=2))
+    previous=root/'compose.json'
+    if previous.is_file():
+        old_config=json.loads(previous.read_text())
+        old_project=old_config.get('name','vmm-runtime')
+        if not (root/'rename-runtime.json').exists():config['name']=old_project
+        config['volumes']={**old_config.get('volumes',{}),**config['volumes']}
+        for name in config['volumes']:
+            if name in old_config.get('volumes',{}):
+                # Keep the actual data volume when changing the Compose project.
+                config['volumes'][name]={**(old_config['volumes'][name] or {}),'name':(old_config['volumes'][name] or {}).get('name',old_project+'_'+name)}
+    atomic(previous,json.dumps(config,indent=2))
     # Default vhost rejects unknown domains; no directory listing or tools are web-accessible.
     configs={'000-default.conf':'''<VirtualHost *:80>
 ServerName vmm-invalid

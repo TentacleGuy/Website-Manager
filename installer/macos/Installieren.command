@@ -84,15 +84,15 @@ fi
 wait_docker
 cd "$INSTALL_DIR"
 if [ ! -f .env ]; then
-    printf 'VMM_HOST_DATA=%s/data\nVMM_BIND=127.0.0.1\n' "$INSTALL_DIR" > .env
+    printf 'TENTACLE_HOST_DATA=%s/data\nTENTACLE_BIND=127.0.0.1\n' "$INSTALL_DIR" > .env
     /bin/chmod 600 .env
 fi
 printf '%s\n' 'Projektmanager und lokale HTTPS-Zertifikate werden vorbereitet ...'
 source "$INSTALL_DIR/app/installer_assets/docker-environment.sh"
 manager_environment "$INSTALL_DIR"
-"$DOCKER" build --build-arg "DOCKER_CLI_IMAGE=$DOCKER_CLI_IMAGE" --tag vmm-manager:dev .
+"$DOCKER" build --build-arg "DOCKER_CLI_IMAGE=$DOCKER_CLI_IMAGE" --tag tentacle-manager:dev .
 "$DOCKER" run --rm --mount "type=bind,source=$INSTALL_DIR,target=/workspace" --mount "type=bind,source=$DOCKER_SOCKET,target=/var/run/docker.sock" --workdir /workspace \
-    vmm-manager:dev python scripts/installer_config.py --host-data "$INSTALL_DIR/data" --dns-port 1053 --check-environment --host-platform darwin
+    tentacle-manager:dev python scripts/installer_config.py --host-data "$INSTALL_DIR/data" --dns-port 1053 --check-environment --host-platform darwin
 "$DOCKER" compose -p tentacle-manager config --quiet
 "$DOCKER" compose -p tentacle-gateway -f infra/compose.gateway.yaml config --quiet
 start_manager

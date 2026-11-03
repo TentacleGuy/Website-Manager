@@ -5,7 +5,8 @@ try {
     $arch = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString()
     if ($arch -notin @('X64','Arm64')) { throw 'Ein 64-Bit-System mit Intel/AMD oder ARM64 wird benoetigt.' }
     $target = Join-Path $env:LOCALAPPDATA 'Tentacle\WebsiteManager'
-    if ($env:VMM_INSTALL_DIR) { $target = $env:VMM_INSTALL_DIR }
+    if ($env:TENTACLE_INSTALL_DIR) { $target = $env:TENTACLE_INSTALL_DIR }
+    elseif ($env:VMM_INSTALL_DIR) { $target = $env:VMM_INSTALL_DIR }
     $source = $PSScriptRoot
     if ([IO.Path]::GetFullPath($source).TrimEnd('\') -ne [IO.Path]::GetFullPath($target).TrimEnd('\')) {
         if ((Test-Path $target) -and -not (Test-Path "$target\.tentacle-installer")) {
@@ -73,12 +74,12 @@ try {
     Set-Location $target
     $hostData = ($target + '\data').Replace('\', '/')
     if (-not (Test-Path '.env')) {
-        [IO.File]::WriteAllText((Join-Path $target '.env'), "VMM_HOST_DATA=$hostData`nVMM_BIND=127.0.0.1`n", (New-Object Text.UTF8Encoding $false))
+        [IO.File]::WriteAllText((Join-Path $target '.env'), "TENTACLE_HOST_DATA=$hostData`nTENTACLE_BIND=127.0.0.1`n", (New-Object Text.UTF8Encoding $false))
     }
     Write-Host 'Projektmanager und lokale HTTPS-Zertifikate werden vorbereitet ...'
     Initialize-ManagerEnvironment $target
-    Invoke-Docker build --build-arg ('DOCKER_CLI_IMAGE=' + $script:DockerCliImage) --tag vmm-manager:dev .
-    Invoke-Docker run --rm --mount "type=bind,source=$target,target=/workspace" --mount ('type=bind,source=' + $script:DockerSocket + ',target=/var/run/docker.sock') --workdir /workspace vmm-manager:dev python scripts/installer_config.py --host-data $hostData --check-environment --host-platform windows
+    Invoke-Docker build --build-arg ('DOCKER_CLI_IMAGE=' + $script:DockerCliImage) --tag tentacle-manager:dev .
+    Invoke-Docker run --rm --mount "type=bind,source=$target,target=/workspace" --mount ('type=bind,source=' + $script:DockerSocket + ',target=/var/run/docker.sock') --workdir /workspace tentacle-manager:dev python scripts/installer_config.py --host-data $hostData --check-environment --host-platform windows
     Invoke-Docker compose -p tentacle-manager config --quiet
     Invoke-Docker compose -p tentacle-gateway -f infra/compose.gateway.yaml config --quiet
     Start-Manager -ForceBuild

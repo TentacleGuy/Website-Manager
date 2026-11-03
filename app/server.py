@@ -1,3 +1,4 @@
+from config_env import config_env
 import ipaddress
 import json
 import os
@@ -551,4 +552,4 @@ if __name__=='__main__':
     threading.Thread(target=update_service.monitor,daemon=True).start()
     import verification_service
     threading.Thread(target=verification_service.recover_interrupted,daemon=True).start()
-    ThreadingHTTPServer((os.environ.get('VMM_LISTEN','127.0.0.1'),8090),Handler).serve_forever()
+    ThreadingHTTPServer((config_env('LISTEN','127.0.0.1'),8090),Handler).serve_forever()

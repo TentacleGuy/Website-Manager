@@ -21,7 +21,7 @@ def configure(root, host_data, dns_port=53):
         for line in env.read_text().splitlines():
             if '=' in line and not line.lstrip().startswith('#'):
                 key,value=line.split('=',1);values[key.strip()]=value.strip().strip("\"'")
-    if values.get('VMM_HOST_DATA','').replace('\\','/').rstrip('/')!=host_data.replace('\\','/').rstrip('/'):
+    if (values.get('TENTACLE_HOST_DATA') or values.get('VMM_HOST_DATA','')).replace('\\','/').rstrip('/')!=host_data.replace('\\','/').rstrip('/'):
         raise ValueError('Die vorhandene .env passt nicht zur lokalen Installation.')
     path = root / 'infra/compose.gateway.yaml'
     existing_gateway=path.is_file()
@@ -32,7 +32,7 @@ def configure(root, host_data, dns_port=53):
     if not existing_gateway:
         gateway['name'] = 'tentacle-gateway'
         gateway['services']['dns']['ports'] = [str(dns_port) + ':53/udp', str(dns_port) + ':53/tcp']
-        socket=values.get('VMM_DOCKER_SOCKET','/var/run/docker.sock')
+        socket=values.get('TENTACLE_DOCKER_SOCKET') or values.get('VMM_DOCKER_SOCKET','/var/run/docker.sock')
         gateway['services']['traefik']['volumes']=[socket+':/var/run/docker.sock:ro' if v.startswith('/var/run/docker.sock:') else v for v in gateway['services']['traefik']['volumes']]
         for service in gateway['services'].values():
             service['ports'] = [p if p.startswith('127.0.0.1:') else '127.0.0.1:' + p for p in service['ports']]

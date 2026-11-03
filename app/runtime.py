@@ -45,7 +45,7 @@ def compose(project,host_data):
             labels[base+'.service']=ident
             if tls: labels[base+'.tls']='true'
         labels['traefik.http.services.'+ident+'.loadbalancer.server.port']='80'
-        services['php'+suffix]={'image':'vmm-php:'+version,'profiles':['php'+suffix],
+        services['php'+suffix]={'image':'tentacle-php:'+version,'profiles':['php'+suffix],
             'depends_on':{'db':{'condition':'service_healthy'}},'volumes':[
                 {'type':'bind','source':root+'/site','target':'/var/www/html'},
                 {'type':'bind','source':root+'/tools','target':'/vmm-tools','read_only':True},

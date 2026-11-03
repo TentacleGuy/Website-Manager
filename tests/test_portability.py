@@ -110,7 +110,7 @@ esac
             command='set -eu; DOCKER="$1"; source "$2"; manager_environment "$3"'
             env={k:v for k,v in os.environ.items() if k not in ('DOCKER_HOST','DOCKER_CONTEXT')}
             subprocess.run(['/bin/bash','-c',command,'test',str(docker),str(ROOT/'app/installer_assets/docker-environment.sh'),str(root)],check=True,capture_output=True,env=env)
-            value=(root/'.env').read_text();self.assertIn('VMM_DOCKER_SOCKET=/run/user/1001/docker.sock',value);self.assertIn('VMM_DOCKER_CLI_IMAGE=docker:29-cli',value);self.assertIn('VMM_BIND=0.0.0.0',value)
+            value=(root/'.env').read_text();self.assertIn('TENTACLE_DOCKER_SOCKET=/run/user/1001/docker.sock',value);self.assertIn('TENTACLE_DOCKER_CLI_IMAGE=docker:29-cli',value);self.assertIn('VMM_BIND=0.0.0.0',value)
 
 class ExistingBackendTests(unittest.TestCase):
     def test_existing_custom_database_version_is_not_downgraded(self):

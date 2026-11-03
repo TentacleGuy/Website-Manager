@@ -87,7 +87,7 @@ class LocalServerFileTests(unittest.TestCase):
 namespace Akeeba\\Engine\\Archiver;
 class Jpa {
     public $entries=[];
-    protected function _addFile($virtual,&$source,$target){$this->entries[$target]=$virtual?$source:file_get_contents($source);}
+    protected function _addFile($virtual,&$source,$target){$this->entries[$target]=$virtual?$source:file_get_contents($source);return true;}
     public function add($source,$target){return $this->_addFile(false,$source,$target);}
 }
 require __DIR__.'/akeeba-local.php';
@@ -108,3 +108,26 @@ echo json_encode($archive->entries);
         files.prepare_local(other,site.parent/'other-tools')
         self.assertEqual((other/'.htaccess').read_text(),'local rewrite rules')
         self.assertEqual((other/'.htaccess.vmm-original').read_text(),'production .htaccess')
+
+    @unittest.skipUnless(shutil.which('php'),'PHP CLI required for archive adapter integration')
+    def test_archive_adapter_skip_succeeds_and_failed_writes_are_not_confirmed(self):
+        site,tools=self.fixture();tools.mkdir()
+        (site/'.user.ini').write_text('local')
+        (site/'.user.ini.vmm-original').write_text('production')
+        (tools/'akeeba-originals.json').write_text(json.dumps({'.user.ini':None,'.user.ini.vmm-original':'.user.ini'}))
+        shutil.copyfile(ROOT/'app/tools/akeeba-originals-archiver.php',tools/'akeeba-originals-archiver.php')
+        script=tools/'test.php';script.write_text('''<?php
+namespace Akeeba\\Engine\\Archiver;
+class Jpa {
+    public $calls=0;
+    protected function _addFile($virtual,&$source,$target){$this->calls++;return false;}
+    public function add($source,$target){return $this->_addFile(false,$source,$target);}
+}
+require __DIR__.'/akeeba-originals-archiver.php';
+putenv('VMM_PROJECT_ROOT='.$argv[1]);$archive=new Vmmjpa();
+$skip=$archive->add($argv[1].'/.user.ini','.user.ini');
+$failed=$archive->add($argv[1].'/.user.ini.vmm-original','.user.ini.vmm-original');
+echo json_encode([$skip,$failed,$archive->calls,is_file(__DIR__.'/akeeba-originals-report.json')]);
+''')
+        run=subprocess.run(['php',str(script),str(site.resolve())],capture_output=True,check=True,text=True)
+        self.assertEqual(json.loads(run.stdout),[True,False,1,False])

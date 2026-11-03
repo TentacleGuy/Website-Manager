@@ -36,11 +36,13 @@ docker compose up -d --build
 
 `--certificates` benötigt mkcert. `setup.py` erzeugt `.env`, Gateway, DNS und Portregeln. Für `*.vmm.test` muss der lokale DNS-Dienst verwendet werden. Das Dashboard öffnet sich unter **http://localhost:8090/**, phpMyAdmin unter **http://localhost:8091/**.
 
-Das Dashboard läuft ohne Anmeldung und bindet standardmäßig nur an den lokalen Rechner. `VMM_BIND=0.0.0.0` in `.env` ermöglicht den bewusst eingerichteten LAN-Zugriff. Für LAN-DNS die Adresse des Docker-Rechners statt `127.0.0.1` angeben und auf weiteren Geräten das öffentliche lokale Stammzertifikat als vertrauenswürdig installieren. Die private Zertifikatdatei wird nicht weitergegeben.
+Konfigurationsvariablen heißen im Entwicklungsstand `TENTACLE_*`. Bisherige `VMM_*`-Namen bleiben als Rückfall gültig; ein nicht leerer `TENTACLE_*`-Wert hat Vorrang. Bestehende `.env`-Dateien müssen nicht manuell geändert werden.
+
+Das Dashboard läuft ohne Anmeldung und bindet standardmäßig nur an den lokalen Rechner. `TENTACLE_BIND=0.0.0.0` in `.env` ermöglicht den bewusst eingerichteten LAN-Zugriff. Für LAN-DNS die Adresse des Docker-Rechners statt `127.0.0.1` angeben und auf weiteren Geräten das öffentliche lokale Stammzertifikat als vertrauenswürdig installieren. Die private Zertifikatdatei wird nicht weitergegeben.
 
 ## Umgebungsabhängige Einrichtung
 
-Das Setup prüft Docker-Dienst, Linux-Container, Prozessorarchitektur und Compose-Version. Der ausgewählte lokale Docker-Kontext wird beibehalten. Ein zur Docker-Servergeneration passendes Docker-CLI-Image wird für den Manager gewählt; Rootless-Sockets werden unter Linux weitergereicht. Auf macOS verwenden Docker Desktop, Colima und OrbStack den Socket innerhalb ihrer Linux-VM. Ein abweichender Socket kann explizit über `VMM_DOCKER_SOCKET` vorgegeben werden.
+Das Setup prüft Docker-Dienst, Linux-Container, Prozessorarchitektur und Compose-Version. Der ausgewählte lokale Docker-Kontext wird beibehalten. Ein zur Docker-Servergeneration passendes Docker-CLI-Image wird für den Manager gewählt; Rootless-Sockets werden unter Linux weitergereicht. Auf macOS verwenden Docker Desktop, Colima und OrbStack den Socket innerhalb ihrer Linux-VM. Ein abweichender Socket kann explizit über `TENTACLE_DOCKER_SOCKET` vorgegeben werden.
 
 Vorhandene `.env`-Zusatzwerte, LAN-Einstellungen, Gateway-Ports und Zertifikate bleiben bei einer erneuten Einrichtung erhalten. Die Prüfung steht in `data/setup-report.json` und unter **System → Dienste & Rechte → Weitere Informationen zur Umgebung**. Fehler werden mit dem konkreten Schritt ausgegeben. Ein nicht verfügbares Image oder eine nicht unterstützte Architektur führt nicht zu einem stillen Rückfall auf eine ältere Datenbank.
 
@@ -158,7 +160,7 @@ Die feste Updatequelle ist [TentacleGuy/Website-Manager](https://github.com/Tent
 
 Der Helfer benötigt eine reguläre Compose-Installation mit `data` als Unterverzeichnis der Installation und den im Standard-Setup eingebundenen Docker-Socket. Downloadprüfung und Installation benötigen Zugriff auf GitHub. Solange noch kein öffentliches Release mit Updatepaket existiert, zeigt der Manager dies an.
 
-Falls unter Windows ein älterer Updatehelfer mit `apply.py: No such file or directory` abbricht, das aktuelle Windows-Setup erneut entpacken und `Installieren.cmd` starten. Bei der Standardinstallation übernimmt es die Programmdateien in den bestehenden, markierten Installationsordner und baut das Manager-Image neu. `data` und `.env` sind nicht im Paket enthalten und bleiben erhalten. Bei einem individuellen Installationsordner denselben `VMM_INSTALL_DIR` wie zuvor verwenden.
+Falls unter Windows ein älterer Updatehelfer mit `apply.py: No such file or directory` abbricht, das aktuelle Windows-Setup erneut entpacken und `Installieren.cmd` starten. Bei der Standardinstallation übernimmt es die Programmdateien in den bestehenden, markierten Installationsordner und baut das Manager-Image neu. `data` und `.env` sind nicht im Paket enthalten und bleiben erhalten. Bei einem individuellen Installationsordner denselben `TENTACLE_INSTALL_DIR` wie zuvor verwenden.
 
 ### Ein Release veröffentlichen
 

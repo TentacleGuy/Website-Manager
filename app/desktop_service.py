@@ -1,4 +1,5 @@
 """Describe host project folders for the narrowly scoped native URL handler."""
+from config_env import config_env
 import json
 import os
 from pathlib import PurePosixPath, PureWindowsPath
@@ -32,7 +33,7 @@ def folder(p):
     try:relative=site.resolve().relative_to(base.resolve())
     except ValueError:return {**result,'reason':'Der Projektordner verweist außerhalb des Projektspeichers.'}
     if relative.parts!=(name,'site'):return {**result,'reason':'Verknüpfte Projektordner werden nicht geöffnet.'}
-    root=settings(DATA).get('projects',os.environ.get('VMM_HOST_DATA',str(DATA)).replace('\\','/').rstrip('/')+'/projects')
+    root=settings(DATA).get('projects',config_env('HOST_DATA',str(DATA)).replace('\\','/').rstrip('/')+'/projects')
     result.update(available=True,path=native_path(root.replace('\\','/').rstrip('/')+'/'+name+'/site'))
     try:
         integration=json.loads((DATA/'desktop-integration.json').read_text())

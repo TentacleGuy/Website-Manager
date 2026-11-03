@@ -1,11 +1,12 @@
 """Host locations with stable /data/<area> paths inside the manager."""
+from config_env import config_env
 import json
 import os
 from pathlib import PurePosixPath
 import re
 
 AREAS={'projects':'Projekte','extensions':'Erweiterungspakete','packages':'CMS-Archiv','backups':'Akeeba-Backups','exports':'Projektsicherungen'}
-ENV_KEYS={key:'VMM_'+key.upper()+'_PATH' for key in AREAS}
+ENV_KEYS={key:'TENTACLE_'+key.upper()+'_PATH' for key in AREAS}
 
 
 def settings(data=None):
@@ -24,7 +25,7 @@ def host_location(key,host_data=None,data=None):
     if key not in AREAS:raise ValueError('Unbekannter Speicherbereich.')
     if host_data is None:
         from store import DATA
-        host_data=os.environ.get('VMM_HOST_DATA',str(DATA))
+        host_data=config_env('HOST_DATA',str(DATA))
     return host_path(settings(data).get(key,host_data.rstrip('/')+'/'+key))
 
 

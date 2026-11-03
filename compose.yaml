@@ -3,23 +3,23 @@ services:
     build:
       context: .
       args:
-        DOCKER_CLI_IMAGE: ${VMM_DOCKER_CLI_IMAGE:-docker:28-cli}
-    image: vmm-manager:dev
+        DOCKER_CLI_IMAGE: ${TENTACLE_DOCKER_CLI_IMAGE:-${VMM_DOCKER_CLI_IMAGE:-docker:28-cli}}
+    image: tentacle-manager:dev
     ports:
-      - "${VMM_BIND:-127.0.0.1}:8090:8090"
+      - "${TENTACLE_BIND:-${VMM_BIND:-127.0.0.1}}:8090:8090"
     environment:
-      VMM_LISTEN: 0.0.0.0
-      VMM_DATA: /data
-      VMM_RUNTIME_PROJECT: ${VMM_RUNTIME_PROJECT:-vmm-runtime}
-      VMM_HOST_DATA: ${VMM_HOST_DATA:?Set absolute VMM_HOST_DATA in .env}
+      TENTACLE_LISTEN: 0.0.0.0
+      TENTACLE_DATA: /data
+      TENTACLE_RUNTIME_PROJECT: ${TENTACLE_RUNTIME_PROJECT:-${VMM_RUNTIME_PROJECT:-tentacle-runtime}}
+      TENTACLE_HOST_DATA: ${TENTACLE_HOST_DATA:-${VMM_HOST_DATA:-}}
     volumes:
       - ./data:/data
-      - ${VMM_PROJECTS_PATH:-${VMM_HOST_DATA}/projects}:/data/projects
-      - ${VMM_EXTENSIONS_PATH:-${VMM_HOST_DATA}/extensions}:/data/extensions
-      - ${VMM_PACKAGES_PATH:-${VMM_HOST_DATA}/packages}:/data/packages
-      - ${VMM_BACKUPS_PATH:-${VMM_HOST_DATA}/backups}:/data/backups
-      - ${VMM_EXPORTS_PATH:-${VMM_HOST_DATA}/exports}:/data/exports
-      - ${VMM_DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+      - ${TENTACLE_PROJECTS_PATH:-${VMM_PROJECTS_PATH:-${TENTACLE_HOST_DATA:-${VMM_HOST_DATA:-}}/projects}}:/data/projects
+      - ${TENTACLE_EXTENSIONS_PATH:-${VMM_EXTENSIONS_PATH:-${TENTACLE_HOST_DATA:-${VMM_HOST_DATA:-}}/extensions}}:/data/extensions
+      - ${TENTACLE_PACKAGES_PATH:-${VMM_PACKAGES_PATH:-${TENTACLE_HOST_DATA:-${VMM_HOST_DATA:-}}/packages}}:/data/packages
+      - ${TENTACLE_BACKUPS_PATH:-${VMM_BACKUPS_PATH:-${TENTACLE_HOST_DATA:-${VMM_HOST_DATA:-}}/backups}}:/data/backups
+      - ${TENTACLE_EXPORTS_PATH:-${VMM_EXPORTS_PATH:-${TENTACLE_HOST_DATA:-${VMM_HOST_DATA:-}}/exports}}:/data/exports
+      - ${TENTACLE_DOCKER_SOCKET:-${VMM_DOCKER_SOCKET:-/var/run/docker.sock}}:/var/run/docker.sock
     networks:
       - gateway
     restart: unless-stopped

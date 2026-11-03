@@ -6,6 +6,21 @@ Alle wesentlichen Änderungen am Website Manager werden hier dokumentiert. Neue 
 
 Noch keine Änderungen.
 
+## [2.0.2] - 2026-11-03
+
+### Verbessert
+
+- Konfiguration und neue Installationen verwenden `TENTACLE_*` statt `VMM_*`. Bestehende Einstellungen bleiben kompatibel; bei beiden Namen hat der Tentacle-Wert Vorrang.
+
+- Neue Docker-Laufzeiten und Manager-/PHP-Images verwenden Tentacle-Namen. Bestehende gemeinsame Laufzeiten werden bei ihrer nächsten Verwendung auf `tentacle-runtime` umgestellt; vorhandene Datenbank-Volumes und individuell konfigurierte Projektnamen bleiben erhalten.
+
+### Behoben
+
+- Backup-Einstellungen werden einzeln an Akeebas Joomla-CLI übergeben, damit Ausgabeordner, Dateiname und die Sicherung der ursprünglichen Serverdateien gemeinsam wirksam werden.
+- Akeeba-Archiv-Anbindung meldet das absichtliche Weglassen lokaler Serverdateien als erfolgreich und bestätigt Originaldateien nur nach erfolgreicher Übernahme. Fehlgeschlagene Versuche werden in der Backup-Übersicht klar gekennzeichnet; die Fehlerursache bleibt im Projekt sichtbar. Die Prüfung meldet fehlende Serverdateien konkret und prüft zuerst Akeebas Abschlussstatus.
+
+- Neue Updatehelfer heißen `tentacle-update-…` und werden nach ihrem Ende automatisch entfernt. Zurückgebliebene beendete Updatehelfer der eigenen Installation werden bereinigt; Updateprotokolle bleiben im Datenordner erhalten.
+
 ## [2.0.1] - 2026-11-02
 
 ### Neu

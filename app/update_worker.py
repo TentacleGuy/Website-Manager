@@ -55,8 +55,8 @@ def apply(root,ident):
                 with sqlite3.connect(root/'data/manager.sqlite',timeout=30) as connection:
                     connection.execute("UPDATE jobs SET status=?,message=?,finished=? WHERE id=(SELECT id FROM jobs WHERE resource='manager-update' AND kind='manager-install' ORDER BY created DESC LIMIT 1)",(state,message,int(time.time())))
             except sqlite3.Error:pass
-    project=os.environ['VMM_UPDATE_PROJECT'];host_data=os.environ['VMM_UPDATE_HOST_DATA'];docker_socket=os.environ.get('VMM_UPDATE_SOCKET','/var/run/docker.sock')
-    env={**os.environ,'VMM_HOST_DATA':host_data,'COMPOSE_PROJECT_NAME':project}
+    project=os.environ.get('TENTACLE_UPDATE_PROJECT') or os.environ['VMM_UPDATE_PROJECT'];host_data=os.environ.get('TENTACLE_UPDATE_HOST_DATA') or os.environ['VMM_UPDATE_HOST_DATA'];docker_socket=os.environ.get('TENTACLE_UPDATE_SOCKET') or os.environ.get('VMM_UPDATE_SOCKET','/var/run/docker.sock')
+    env={**os.environ,'VMM_HOST_DATA':host_data,'TENTACLE_HOST_DATA':host_data,'COMPOSE_PROJECT_NAME':project}
     def command(args):
         run_logged(args,root,env,stage/'update.log',lambda:report('running',metadata['message']))
     compose=['docker','compose','-p',project,'-f',str(root/'compose.yaml')]

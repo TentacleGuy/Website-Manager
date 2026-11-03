@@ -1,4 +1,5 @@
 """Storage settings and a separately supervised Docker migration."""
+from config_env import config_env
 import json
 import os
 from pathlib import Path
@@ -37,7 +38,7 @@ def measure_usage():
 
 
 def status():
-    base=os.environ.get('VMM_HOST_DATA',str(DATA));saved=settings();areas=[];stale=False
+    base=config_env('HOST_DATA',str(DATA));saved=settings();areas=[];stale=False
     for key,label in AREAS.items():
         path=DATA/key;path.mkdir(exist_ok=True)
         cached=_USAGE.get(str(path));stale=stale or not cached or time.time()-cached[0]>300
@@ -52,7 +53,7 @@ def status():
 def prepare(paths):
     import operations as op
     from runtime import host_path
-    base=os.environ.get('VMM_HOST_DATA',str(DATA));current={key:settings().get(key,base.rstrip('/')+'/'+key) for key in AREAS}
+    base=config_env('HOST_DATA',str(DATA));current={key:settings().get(key,base.rstrip('/')+'/'+key) for key in AREAS}
     paths=validate_paths(paths,current,base)
     changed=[key for key in AREAS if host_path(paths[key])!=host_path(current[key])]
     if not changed:raise ValueError('Die Speicherorte sind unverändert.')
@@ -72,7 +73,7 @@ def prepare(paths):
 def helper_args(plan,mode):
     from runtime import host_path
     args=['docker','run','--rm']
-    if mode=='apply':args+=['-d','--name','vmm-storage-'+plan['id'],'--label','vmm.manager.storage=true']
+    if mode=='apply':args+=['-d','--name','tentacle-storage-'+plan['id'],'--label','vmm.manager.storage=true']
     args+=['--mount','type=bind,source='+plan['host_data']+',target=/vmm-data', '--mount','type=bind,source='+plan['host_root']+',target=/installation', '--mount','type=bind,source='+plan['socket']+',target=/var/run/docker.sock']
     for key in plan['changed']:
         # -v creates new host directories; the helper rejects nonempty destinations.

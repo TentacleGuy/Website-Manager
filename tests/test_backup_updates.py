@@ -235,3 +235,21 @@ class WorkerTests(unittest.TestCase):
             self.assertNotIn('tls',value['routers']['vmm-protocol-tls84'])
             self.assertEqual(value['middlewares']['vmm-protocol-php84']['redirectScheme']['scheme'],'http')
             self.assertEqual(value['routers']['vmm-protocol-php84']['tls'],{})
+
+class UpdateHelperCleanupTests(unittest.TestCase):
+    def test_cleanup_only_stopped_helpers_of_this_installation(self):
+        import update_service, operations
+        own={'Mounts':[]}
+        ids=['a'*12,'b'*12,'c'*12]
+        def command(args,**kwargs):
+            if args[:2]==['docker','ps']:
+                return ('\n'.join(ids) if 'status=exited' in args else '').encode()
+            if args[:2]==['docker','inspect']:
+                if args[2] not in ids:return json.dumps([own]).encode()
+                ident=args[2]
+                return json.dumps([{'Name':'/vmm-update-'+'d'*16,'State':{'Status':'running' if ident==ids[2] else 'exited'},'Mounts':[{'Destination':'/installation','Source':'/other' if ident==ids[1] else '/ours'}]}]).encode()
+            return b''
+        with patch.object(operations,'command',side_effect=command) as execute,patch.object(update_service,'installation_host_paths',return_value=('/ours/data','/ours')):
+            update_service.cleanup_helpers()
+        removed=[call.args[0] for call in execute.call_args_list if call.args[0][:2]==['docker','rm']]
+        self.assertEqual(removed,[['docker','rm',ids[0]]])

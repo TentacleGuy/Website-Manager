@@ -1,4 +1,5 @@
 """Portable, non-destructive Docker diagnostics shared by installers and the UI."""
+from config_env import config_env
 import json
 import os
 from pathlib import Path
@@ -86,13 +87,13 @@ def configure_host(root,docker='docker'):
     if os.environ.get('DOCKER_HOST'):
         context={**context,'Endpoints':{'docker':{'Host':os.environ['DOCKER_HOST']}}}
     value=probe(docker,context)
-    override=os.environ.get('VMM_DOCKER_SOCKET')
+    override=config_env('DOCKER_SOCKET')
     if override:
         if not override.startswith('/') or any(c in override for c in '\n\r,'):raise ValueError('Ungültiger Docker-Socket-Pfad.')
         value['socket']=override
     env=root/'.env'
     text=env.read_text() if env.is_file() else ''
-    settings={'VMM_DOCKER_CLI_IMAGE':value['cli_image'],'VMM_DOCKER_SOCKET':value['socket']}
+    settings={'TENTACLE_DOCKER_CLI_IMAGE':value['cli_image'],'TENTACLE_DOCKER_SOCKET':value['socket']}
     for key,item in settings.items():
         line=key+'='+item
         pattern=r'^'+key+r'=.*$'

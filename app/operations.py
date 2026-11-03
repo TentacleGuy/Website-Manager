@@ -1,3 +1,4 @@
+from config_env import config_env
 import json
 import hashlib
 import os
@@ -37,7 +38,7 @@ def write_compose(p):
     root=folder(p);root.mkdir(parents=True,exist_ok=True)
     (DATA/'extensions').mkdir(exist_ok=True)
     path=root/'compose.json'
-    path.write_text(json.dumps(compose(p,os.environ.get('VMM_HOST_DATA',str(DATA))),indent=2));path.chmod(0o600)
+    path.write_text(json.dumps(compose(p,config_env('HOST_DATA',str(DATA))),indent=2));path.chmod(0o600)
     args=['docker','compose','-f',str(path)]
     preview=root/'preview.compose.json'
     if preview_ports(preview): args+=['-f',str(preview)]
@@ -48,11 +49,11 @@ def ensure_runtime(php):
     source=RUNTIME_DOCKERFILE.read_bytes()
     revision=hashlib.sha256(source).hexdigest()
     try:
-        actual=command(['docker','image','inspect','vmm-php:'+php,'--format','{{index .Config.Labels "vmm.runtime.revision"}}'],timeout=15).decode().strip()
+        actual=command(['docker','image','inspect','tentacle-php:'+php,'--format','{{index .Config.Labels "vmm.runtime.revision"}}'],timeout=15).decode().strip()
         if actual==revision: return
     except Exception:
         pass
-    command(['docker','build','-t','vmm-php:'+php,'--label','vmm.runtime.revision='+revision,'--build-arg','PHP_VERSION='+php,'-'],input=source,timeout=1800)
+    command(['docker','build','-t','tentacle-php:'+php,'--label','vmm.runtime.revision='+revision,'--build-arg','PHP_VERSION='+php,'-'],input=source,timeout=1800)
 
 def php_service(p): return 'web' if p['storage']=='legacy' else 'php'+p['php'].replace('.','')
 
@@ -141,7 +142,7 @@ def check_modules(p,php,extra=None):
     from compatibility import requirements,satisfies,pending_requirements
     items=requirements(folder(p)/'site',p['cms'],p.get('version',''))+pending_requirements(p)+list(extra or [])
     required={value for r in items for value in r.get('php_extensions',[])}
-    output=command(['docker','run','--rm','--network','none','vmm-php:'+php,'php','-r','echo json_encode(["version"=>PHP_VERSION,"modules"=>array_map("strtolower",get_loaded_extensions())]);'],timeout=60)
+    output=command(['docker','run','--rm','--network','none','tentacle-php:'+php,'php','-r','echo json_encode(["version"=>PHP_VERSION,"modules"=>array_map("strtolower",get_loaded_extensions())]);'],timeout=60)
     actual=json.loads(output)
     for req in items:
         if req.get('php') and not satisfies(actual['version'],req['php']):raise ValueError(req['label']+' benötigt PHP '+req['php']+'; das Laufzeitprofil meldet '+actual['version']+'.')
@@ -280,7 +281,7 @@ def restore_akeeba(name,backup_id,archive,password=''):
             from backup_service import restore
             return restore(name)
         kickstart=kickstart_service.ensure(p.get('kickstart','auto'),p['php'])
-        host=host_path(os.environ.get('VMM_HOST_DATA',str(DATA)))
+        host=host_path(config_env('HOST_DATA',str(DATA)))
         script=folder(p)/'tools'/'extract.php'
         script.write_text("<?php\n$input=json_decode(stream_get_contents(STDIN),true); $argv=['kickstart.php','/vmm-input/'.$input['archive'],'/var/www/html','--silent']; if($input['password']!=='') $argv[]='--password='.$input['password']; $argc=count($argv); $_SERVER['argv']=$argv; $_SERVER['argc']=$argc; require '/vmm-kickstart/kickstart.php';\n")
         command(['docker','run','--rm','--network','none','--read-only','--cap-drop','ALL','--security-opt','no-new-privileges','--tmpfs','/tmp:rw,size=256m',
@@ -288,7 +289,7 @@ def restore_akeeba(name,backup_id,archive,password=''):
             '--mount','type=bind,source='+__import__('storage_paths').host_location('projects')+'/'+name+'/tools,target=/vmm-tools,readonly',
             '--mount','type=bind,source='+__import__('storage_paths').host_location('backups')+'/'+backup_id+',target=/vmm-input,readonly',
             '--mount','type=bind,source='+host+'/tools/'+kickstart.relative_to(DATA/'tools').as_posix()+',target=/vmm-kickstart/kickstart.php,readonly',
-            '-i','vmm-php:'+p['php'],'php','/vmm-tools/extract.php'],input=json.dumps({'archive':archive,'password':password}).encode(),timeout=1800)
+            '-i','tentacle-php:'+p['php'],'php','/vmm-tools/extract.php'],input=json.dumps({'archive':archive,'password':password}).encode(),timeout=1800)
         if not (site/'installation'/'index.php').exists(): raise ValueError('Das Archiv enthält keinen unterstützten Akeeba-Wiederherstellungsassistenten.')
         from project_files import prepare_local
         prepare_local(site,folder(p)/'tools')
@@ -355,7 +356,8 @@ def reconcile():
             if p['status'] in ('starting','stopping','preparing','error') or p.get('restore'): continue
             if c.execute("SELECT 1 FROM jobs WHERE resource=? AND status IN ('queued','running')",(p['slug'],)).fetchone(): continue
             if p.get('storage')=='shared':
-                services=states.get('vmm-runtime',{})
+                from shared_operations import runtime_project
+                services=states.get(runtime_project(),{})
                 from database_profiles import profile
                 running=services.get(profile(p)['service'])=='running' and (DATA/'shared/state'/(p['slug']+'.enabled')).is_file()
                 c.execute('UPDATE projects SET status=? WHERE slug=?',('running' if running else 'stopped',p['slug']))

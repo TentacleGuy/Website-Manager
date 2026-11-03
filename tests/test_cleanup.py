@@ -102,3 +102,12 @@ class CleanupTests(unittest.TestCase):
             items=cleanup.inventory()['items']
         item=next(x for x in items if x['kind']=='trash');self.assertIsNone(item['size'])
         cleanup.delete('trash',ident);self.assertFalse(folder.exists())
+
+    def test_failed_backup_attempt_is_identified_as_incomplete(self):
+        folder=self.root/'backups'/self.ident;folder.mkdir(parents=True)
+        (folder/'manager-backup.json').write_text(json.dumps({'project':'example','status':'error','error':'Originaldatei fehlt','files':[]}))
+        item=cleanup.review('backup',self.ident)
+        self.assertEqual(item['status'],'error')
+        self.assertIn('Fehlgeschlagener Backup-Versuch',item['name'])
+        self.assertIn('Keine vollständige Sicherung',item['note'])
+        self.assertIn('Originaldatei fehlt',item['note'])

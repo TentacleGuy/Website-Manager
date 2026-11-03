@@ -77,25 +77,30 @@ def create(name,profile=1,verify=False):
         shutil.copyfile(Path(__file__).parent/'tools/akeeba-local.php',tools/'akeeba-local.php')
         output='/vmm-backups/'+ident
         overrides={'akeeba.basic.output_directory':output,'akeeba.basic.archive_name':filename,'akeeba.basic.backup_type':'full','akeeba.advanced.archiver_engine':'vmmjpa' if mapping else 'jpa','akeeba.advanced.postproc_engine':'none','akeeba.quota.enable_count_quota':'0','akeeba.quota.enable_size_quota':'0','akeeba.quota.maxage.enable':'0','akeeba.quota.remotely.enable_count_quota':'0','akeeba.quota.remotely.enable_size_quota':'0','akeeba.quota.remotely.maxage.enable':'0','akeeba.quota.obsolete_quota':'0','akeeba.quota.enable_logfiles':'0'}
-        params='--overrides='+','.join(k+'='+v for k,v in overrides.items())
+        # Joomla's array option needs one occurrence per setting. WP-CLI
+        # associative options use one value, so retain its comma-separated form.
+        params=(['--overrides='+k+'='+v for k,v in overrides.items()] if p['cms']=='joomla'
+                else ['--overrides='+','.join(k+'='+v for k,v in overrides.items())])
         if p['cms']=='joomla':base=['php','-d','auto_prepend_file=/vmm-tools/akeeba-local.php','cli/joomla.php'];take=['akeeba:backup:take'];query=['akeeba:backup:list']
         else:base=['php','-d','auto_prepend_file=/vmm-tools/akeeba-local.php','/usr/local/bin/wp','--allow-root'];take=['akeeba','backup','take'];query=['akeeba','backup','list']
         legacy=available.get('driver')=='joomla-legacy'
         if legacy:
             shutil.copyfile(Path(__file__).parent/'tools/akeeba-legacy-status.php',tools/'akeeba-legacy-status.php')
             take_command=['php','-d','auto_prepend_file=/vmm-tools/akeeba-local.php','cli/akeeba-backup.php','--profile='+str(profile),'--description='+description]+['--override='+k+'='+v for k,v in overrides.items()]
-        else:take_command=base+take+['--profile='+str(profile),'--description='+description,params]
+        else:take_command=base+take+['--profile='+str(profile),'--description='+description]+params
         op.exec_php(p,take_command,timeout=7200,allowed_returncodes=(0,2))
-        if required:
-            try:seen=json.loads(report.read_text())
-            except (OSError,ValueError):seen={}
-            if any(not seen.get(name) for name in required):raise ValueError('Akeeba hat nicht alle ursprünglichen Serverdateien gesichert. Bitte Datei-Ausschlüsse im Profil prüfen. Das Archiv wird nicht als vollständig angeboten.')
         if legacy:
             raw=op.exec_php(p,['php','/vmm-tools/akeeba-legacy-status.php'],input=json.dumps({'description':description,'profile':profile}).encode(),timeout=120)
         else:raw=op.exec_php(p,base+query+['--description='+description,'--format=json'],timeout=120)
         rows=json_records(raw)
         record=next((r for r in rows if r.get('description')==description and r.get('status')=='complete'),None)
         if not record:raise ValueError('Akeeba hat die Sicherung nicht als vollständig abgeschlossen bestätigt. Dateien bleiben als unvollständige Sicherung zur Diagnose erhalten.')
+        if required:
+            try:seen=json.loads(report.read_text())
+            except (OSError,ValueError):seen={}
+            missing=[name for name in required if not isinstance(seen,dict) or not seen.get(name)]
+            if missing:
+                raise ValueError('Akeeba hat nicht alle ursprünglichen Serverdateien gesichert: '+', '.join(missing)+'. Der Sicherungsnachweis fehlt; mögliche Ursachen sind Datei-Ausschlüsse oder eine nicht geladene Archiv-Anbindung. Das Archiv wird nicht als vollständig angeboten.')
         main=stage/(filename+'.jpa')
         parts=max(1,int(record.get('multipart') or 1))
         if parts>10000:raise ValueError('Akeeba meldet eine ungültige Anzahl Archivteile.')
@@ -105,8 +110,9 @@ def create(name,profile=1,verify=False):
             if stream.read(3)!=b'JPA':raise ValueError('Akeeba hat kein gültiges JPA-Hauptarchiv erzeugt.')
         info={'project':name,'created':int(time.time()),'profile':profile,'status':'complete','files':names,'restored_server_files':[name for name in SERVER_FILES if name in required],'native_id':str(record.get('id','')),'sha256':{file:op.digest(stage/file) for file in names}}
         metadata.write_text(json.dumps(info))
-    except Exception:
-        metadata.write_text(json.dumps({'project':name,'created':int(time.time()),'profile':profile,'status':'error','files':[]}))
+    except Exception as error:
+        from store import redact
+        metadata.write_text(json.dumps({'project':name,'created':int(time.time()),'profile':profile,'status':'error','files':[],'error':redact(str(error))}))
         raise
     if verify:
         from verification_service import run

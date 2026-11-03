@@ -24,15 +24,15 @@ manager_environment() {
     esac
     case "$system" in *Docker\ Desktop*) socket=/var/run/docker.sock ;; esac
     if [ "$(uname -s)" = Darwin ]; then case "$socket" in /run/user/*) ;; *) socket=/var/run/docker.sock ;; esac;fi
-    socket=${VMM_DOCKER_SOCKET:-$socket}
+    socket=${TENTACLE_DOCKER_SOCKET:-${VMM_DOCKER_SOCKET:-$socket}}
     case "$socket" in /*) ;; *) return 1 ;; esac
     case "$socket" in *','*|*$'\n'*|*$'\r'*) printf '%s\n' 'Nicht unterstuetzter Docker-Socket-Pfad.' >&2; return 1 ;; esac
     DOCKER_CLI_IMAGE="docker:$major-cli"
     DOCKER_SOCKET=$socket
     file="$root/.env"
     [ -f "$file" ] || : > "$file"
-    for key in VMM_DOCKER_CLI_IMAGE VMM_DOCKER_SOCKET; do
-        if [ "$key" = VMM_DOCKER_CLI_IMAGE ]; then value=$DOCKER_CLI_IMAGE; else value=$socket; fi
+    for key in TENTACLE_DOCKER_CLI_IMAGE TENTACLE_DOCKER_SOCKET; do
+        if [ "$key" = TENTACLE_DOCKER_CLI_IMAGE ]; then value=$DOCKER_CLI_IMAGE; else value=$socket; fi
         temp="$file.environment-new"
         /usr/bin/awk -v key="$key" -v value="$value" 'BEGIN{found=0} index($0,key"=")==1{print key"="value;found=1;next} {print} END{if(!found)print key"="value}' "$file" > "$temp" || return 1
         /bin/chmod 600 "$temp"; /bin/mv "$temp" "$file"

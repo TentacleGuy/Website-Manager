@@ -1,4 +1,5 @@
 """Persistent metadata and jobs; Fernet retained for legacy credential migration."""
+from config_env import config_env
 import os
 import re
 from pathlib import Path
@@ -8,7 +9,10 @@ import secrets
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-DATA = Path(os.environ.get('VMM_DATA', './data')).resolve()
+if any(key in os.environ for key in ('TENTACLE_HOST_DATA','VMM_HOST_DATA')) and not config_env('HOST_DATA'):
+    raise ValueError('TENTACLE_HOST_DATA in der .env auf den absoluten Datenordner setzen.')
+
+DATA = Path(config_env('DATA', './data')).resolve()
 DATA.mkdir(parents=True, exist_ok=True)
 POOL = ThreadPoolExecutor(max_workers=2)
 LOCK = threading.RLock()

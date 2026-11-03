@@ -74,10 +74,14 @@ def diagnostics():
     import operations as op
     from store import redact
     try:
-        container=json.loads(op.command(['docker','inspect','vmm-update-'+ident],timeout=5))[0]
+        name='tentacle-update-'+ident
+        try:container=json.loads(op.command(['docker','inspect',name],timeout=5))[0]
+        except Exception:
+            name='vmm-update-'+ident
+            container=json.loads(op.command(['docker','inspect',name],timeout=5))[0]
         state=container['State'];text='Updatehelfer: '+str(state.get('Status','unbekannt'))+' · Exit-Code: '+str(state.get('ExitCode','?'))
         import subprocess
-        logs=subprocess.run(['docker','logs','--tail','100','vmm-update-'+ident],capture_output=True,timeout=5)
+        logs=subprocess.run(['docker','logs','--tail','100',name],capture_output=True,timeout=5)
         text+='\n'+(logs.stdout+logs.stderr).decode(errors='replace')
         installation=installation_status() or installation
         if state.get('Status') in ('exited','dead') and installation.get('status') in ('queued','running'):
@@ -206,19 +210,41 @@ def prepare_install(expected,ident):
     probe="from pathlib import Path; root=Path('/installation'); required=['compose.yaml','data/updates/"+ident+"/apply.py','data/updates/"+ident+"/manager-update.zip']; missing=[p for p in required if not (root/p).is_file()]; assert not missing, 'Installationsordner falsch eingebunden; fehlend: '+', '.join(missing)"
     op.command(['docker','run','--rm','--mount','type=bind,source='+host_root+',target=/installation,readonly',image,'python','-c',probe],timeout=30)
     progress(ident,expected,'Separater Updatehelfer wird gestartet …','launch',job=row['id'] if row else None)
-    op.command(['docker','run','-d','--name','vmm-update-'+ident,'--label','vmm.manager.update=true',
+    op.command(['docker','run','--rm','-d','--name','tentacle-update-'+ident,'--label','vmm.manager.update=true',
             '--mount','type=bind,source='+host_root+',target=/installation',
             '--mount','type=bind,source='+docker_socket+',target=/var/run/docker.sock',
-            '-e','VMM_UPDATE_SOCKET='+docker_socket,'-e','VMM_UPDATE_PROJECT='+compose_project,'-e','VMM_UPDATE_HOST_DATA='+host_data,
+            '-e','TENTACLE_UPDATE_SOCKET='+docker_socket,'-e','TENTACLE_UPDATE_PROJECT='+compose_project,'-e','TENTACLE_UPDATE_HOST_DATA='+host_data,
             '-w','/installation',image,'python','/installation/data/updates/'+ident+'/apply.py',ident],timeout=30)
     return 'Update gestartet. Der Manager startet neu; diese Seite verbindet sich automatisch wieder.'
 
+
+def cleanup_helpers():
+    """Remove only stopped update helpers mounted to this installation."""
+    import operations as op
+    own=json.loads(op.command(['docker','inspect',os.environ.get('HOSTNAME','')],timeout=5))[0]
+    _,host_root=installation_host_paths(own)
+    for state in ('exited','dead'):
+        ids=op.command(['docker','ps','-aq','--filter','label=vmm.manager.update=true','--filter','status='+state],timeout=10).decode().splitlines()
+        for ident in ids:
+            if not re.fullmatch(r'[a-f0-9]{12,64}',ident):continue
+            item=json.loads(op.command(['docker','inspect',ident],timeout=5))[0]
+            if item.get('State',{}).get('Status') not in ('exited','dead'):continue
+            name=item.get('Name','').lstrip('/')
+            if not re.fullmatch(r'(?:vmm|tentacle)-update-[a-f0-9]{16}',name):continue
+            if not any(m.get('Destination')=='/installation' and m.get('Source')==host_root for m in item.get('Mounts',[])):continue
+            op.command(['docker','rm',ident],timeout=10)
+
+
 def monitor():
-    next_check=0
+    next_check=0;next_cleanup=0
     while True:
         try:
             if time.time()>=next_check:
                 check();next_check=time.time()+6*60*60
+            if time.time()>=next_cleanup:
+                next_cleanup=time.time()+60
+                try:cleanup_helpers()
+                except Exception:pass
             state=installation_status() or {}
             if state.get('status') in ('queued','running') and state.get('phase') in (None,'launch','worker') and time.time()-state.get('time',time.time())>10:
                 diagnostics()

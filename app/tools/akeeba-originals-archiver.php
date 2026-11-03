@@ -18,14 +18,14 @@ class Vmmjpa extends Jpa
                     $archiveName = str_replace('\\', '/', $targetName);
                     if (substr($archiveName, 0, 2) === './') $archiveName = substr($archiveName, 2);
                     if ($archiveName !== $name) return parent::_addFile($isVirtual, $sourceNameOrData, $targetName);
-                    if ($map[$name] === null) return;
+                    if ($map[$name] === null) return true;
                     $targetName = $map[$name];
                     $mapped = true;
                 }
             }
         }
         $result = parent::_addFile($isVirtual, $sourceNameOrData, $targetName);
-        if ($mapped) {
+        if ($mapped && $result === true) {
             $report = __DIR__ . '/akeeba-originals-report.json';
             $seen = is_file($report) ? json_decode(file_get_contents($report), true) : [];
             if (!is_array($seen)) $seen = [];

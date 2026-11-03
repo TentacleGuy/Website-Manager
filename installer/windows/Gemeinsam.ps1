@@ -61,7 +61,7 @@ function Start-Manager {
     try { Register-ProjectFolders } catch { Write-Warning ('Projektordner-Anbindung: ' + $_.Exception.Message) }
     Initialize-ManagerEnvironment $PSScriptRoot
     $actual = ''
-    try { $actual = Invoke-Docker image inspect vmm-manager:dev --format '{{index .Config.Labels "vmm.docker.cli.image"}}' } catch {}
+    try { $actual = Invoke-Docker image inspect tentacle-manager:dev --format '{{index .Config.Labels "vmm.docker.cli.image"}}' } catch {}
     if ($ForceBuild -or $actual -ne $script:DockerCliImage) { Invoke-Docker compose -p tentacle-manager build manager }
     $networks = @(Invoke-Docker network ls --format '{{.Name}}')
     if ($networks -notcontains 'vmm-gateway') { Invoke-Docker network create vmm-gateway }
@@ -105,13 +105,14 @@ function Initialize-ManagerEnvironment([string]$Root) {
     if ($endpoint -notmatch '^(unix://|npipe:)') { throw 'Der gewaehlte Docker-Kontext ist nicht lokal. Lokale Projektdateien benoetigen einen lokalen Docker-Dienst.' }
     $script:DockerSocket = '/var/run/docker.sock'
     if ($endpoint.StartsWith('unix://') -and $info.OperatingSystem -notlike '*Docker Desktop*') { $script:DockerSocket = $endpoint.Substring(7) }
-    if ($env:VMM_DOCKER_SOCKET) { $script:DockerSocket = $env:VMM_DOCKER_SOCKET }
+    if ($env:TENTACLE_DOCKER_SOCKET) { $script:DockerSocket = $env:TENTACLE_DOCKER_SOCKET }
+    elseif ($env:VMM_DOCKER_SOCKET) { $script:DockerSocket = $env:VMM_DOCKER_SOCKET }
     if (-not $script:DockerSocket.StartsWith('/')) { throw 'Ein absoluter Linux-Docker-Socket-Pfad wird benoetigt.' }
     if ($script:DockerSocket.Contains(',') -or $script:DockerSocket.Contains("`n")) { throw 'Nicht unterstuetzter Docker-Socket-Pfad.' }
     $script:DockerCliImage = "docker:$major-cli"
     $envFile = Join-Path $Root '.env'
     $text = if (Test-Path $envFile) { [IO.File]::ReadAllText($envFile) } else { '' }
-    foreach ($entry in @(@('VMM_DOCKER_CLI_IMAGE',$script:DockerCliImage),@('VMM_DOCKER_SOCKET',$script:DockerSocket))) {
+    foreach ($entry in @(@('TENTACLE_DOCKER_CLI_IMAGE',$script:DockerCliImage),@('TENTACLE_DOCKER_SOCKET',$script:DockerSocket))) {
         $pattern = '(?m)^' + $entry[0] + '=.*$'
         $line = $entry[0] + '=' + $entry[1]
         if ([regex]::IsMatch($text,$pattern)) { $text = [regex]::Replace($text,$pattern,[System.Text.RegularExpressions.MatchEvaluator]{ param($m) $line }) }
