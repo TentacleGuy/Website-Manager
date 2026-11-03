@@ -117,7 +117,7 @@ class AkeebaCreationTests(unittest.TestCase):
                 self.assertIn('--overrides=akeeba.quota.enable_count_quota=0',overrides)
                 self.assertIn('--overrides=akeeba.basic.output_directory=/vmm-backups/'+ident,overrides)
                 self.assertTrue(all(',' not in value for value in overrides))
-                (stage/(base+'.jpa')).write_bytes(b'JPA-test-native-archive');(stage/(base+'.j01')).write_bytes(b'part-one')
+                (stage/(base+'.jpa')).write_bytes(b'last-part');(stage/(base+'.j01')).write_bytes(b'JPA-test-native-archive')
                 return b'Backup complete'
             return json.dumps([{'id':42,'description':'VMM-'+ident,'status':'complete','multipart':2}]).encode()
         with patch('akeeba_service.capability',return_value={'available':True}),patch('akeeba_service.secrets.token_hex',return_value=ident),patch('operations.write_tools',side_effect=lambda p:(akeeba.DATA/'projects'/name/'tools').mkdir(parents=True,exist_ok=True)),patch('operations.exec_php',side_effect=execute):
@@ -126,15 +126,24 @@ class AkeebaCreationTests(unittest.TestCase):
         info=json.loads((akeeba.DATA/'backups'/ident/'manager-backup.json').read_text())
         self.assertEqual(info['status'],'complete');self.assertEqual(len(info['files']),2);self.assertEqual(len(info['sha256']),2)
 
-    def test_native_backup_requires_verified_original_server_files(self):
+    def test_native_backup_without_server_file_evidence_is_downloadable_but_unverified(self):
         from project_files import prepare_local
         name=self.setup_project('akeeba-originals-evidence');ident=secrets.token_hex(12)
         site=akeeba.DATA/'projects'/name/'site';site.mkdir(parents=True,exist_ok=True)
         (site/'.htaccess').write_text('production');(site/'htaccess.txt').write_text('local')
         tools=site.parent/'tools';prepare_local(site,tools)
-        with patch('akeeba_service.capability',return_value={'available':True}),patch('akeeba_service.secrets.token_hex',return_value=ident),patch('operations.write_tools'),patch('operations.exec_php',return_value=json.dumps([{'description':'VMM-'+ident,'status':'complete'}]).encode()):
-            with self.assertRaisesRegex(ValueError,'ursprünglichen Serverdateien'):akeeba.create(name)
-        self.assertEqual(json.loads((akeeba.DATA/'backups'/ident/'manager-backup.json').read_text())['status'],'error')
+        def execute(p,args,**kwargs):
+            if 'akeeba:backup:take' in args:
+                (akeeba.DATA/'backups'/ident/('vmm-'+name+'-'+ident+'.jpa')).write_bytes(b'JPA-fixture')
+                return b'done'
+            return json.dumps([{'description':'VMM-'+ident,'status':'complete'}]).encode()
+        with patch('akeeba_service.capability',return_value={'available':True}),patch('akeeba_service.secrets.token_hex',return_value=ident),patch('operations.write_tools'),patch('operations.exec_php',side_effect=execute):
+            self.assertIn('Download',akeeba.create(name))
+        info=json.loads((akeeba.DATA/'backups'/ident/'manager-backup.json').read_text())
+        self.assertEqual(info['status'],'unverified')
+        self.assertEqual(info['native_status'],'complete')
+        self.assertIn('.htaccess',info['warning'])
+        self.assertEqual(len(info['files']),1)
         self.assertEqual((site/'.htaccess').read_text(),'local');self.assertEqual((site/'.htaccess.vmm-original').read_text(),'production')
 
     def test_native_backup_records_original_configuration_without_live_renames(self):
@@ -233,3 +242,67 @@ class ForeignRuntimeMigrationTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'anderen Installation'):worker.apply(plan)
         self.assertFalse(any('stop' in command or 'up' in command for command in commands))
         self.assertEqual((root/'sources/extensions/package.zip').read_bytes(),b'original-package')
+
+class AkeebaRecoveryTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
+        self.root=Path(self.tmp.name);self.project=self.root/'projects/demo';self.site=self.project/'site';self.site.mkdir(parents=True)
+        self.ident='a'*24;self.stage=self.root/'backups'/self.ident;self.stage.mkdir(parents=True)
+        self.meta=self.stage/'manager-backup.json';self.meta.write_text(json.dumps({'project':'demo','status':'error','profile':1,'created':1,'files':[]}))
+        self.native=self.site/'administrator/backups';self.native.mkdir(parents=True)
+        (self.native/'site.jpa').write_bytes(b'JPA-original-archive')
+        self.record={'id':2,'description':'VMM-'+self.ident,'status':'complete','type':'full','archivename':'site.jpa','absolute_path':'/vmm-projects/demo/site/administrator/backups/site.jpa','multipart':1}
+        for context in (patch.object(akeeba,'DATA',self.root),patch.object(akeeba,'project',return_value={'slug':'demo','status':'running'}),patch('operations.folder',return_value=self.project),patch('operations.exec_php',side_effect=lambda *a,**k:json.dumps([self.record]).encode())):
+            context.start();self.addCleanup(context.stop)
+
+    def test_recovers_completed_native_backup_without_changing_original(self):
+        self.assertIn('1 vorhandene',akeeba.reconcile('demo'))
+        self.assertEqual((self.stage/'site.jpa').read_bytes(),b'JPA-original-archive')
+        self.assertEqual((self.native/'site.jpa').read_bytes(),b'JPA-original-archive')
+        info=json.loads(self.meta.read_text());self.assertEqual(info['status'],'unverified');self.assertEqual(info['native_id'],'2')
+        self.assertIn('nicht bestätigt',info['warning'])
+        self.assertIn('0 vorhandene',akeeba.reconcile('demo'))
+
+    def test_multipart_header_is_checked_in_first_part(self):
+        (self.native/'site.jpa').write_bytes(b'final-part')
+        (self.native/'site.j01').write_bytes(b'JPA-first-part');self.record['multipart']=2
+        akeeba.reconcile('demo')
+        self.assertEqual(json.loads(self.meta.read_text())['files'],['site.jpa','site.j01'])
+
+    def test_missing_part_is_not_accepted(self):
+        self.record['multipart']=2
+        with self.assertRaises(ValueError):akeeba.reconcile('demo')
+        self.assertEqual(json.loads(self.meta.read_text())['status'],'error')
+
+    def test_non_completed_native_backup_is_not_accepted(self):
+        self.record['status']='fail'
+        with self.assertRaisesRegex(ValueError,'kein abgeschlossenes'):akeeba.reconcile('demo')
+
+    def test_foreign_paths_and_symlinks_are_not_imported(self):
+        for path in ('/etc/site.jpa','/vmm-projects/demo/site/../../site.jpa'):
+            self.record['absolute_path']=path
+            with self.assertRaises(ValueError):akeeba.reconcile('demo')
+        self.record['absolute_path']='/vmm-projects/demo/site/administrator/backups/site.jpa'
+        (self.native/'site.jpa').unlink();(self.native/'site.jpa').symlink_to(self.meta)
+        with self.assertRaises(ValueError):akeeba.reconcile('demo')
+
+class AkeebaCreationRecoveryTests(unittest.TestCase):
+    def test_successful_native_backup_in_profile_directory_is_adopted(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);site=root/'projects/demo/site';site.mkdir(parents=True)
+            tools=site.parent/'tools';tools.mkdir()
+            native=site/'administrator/backups';native.mkdir(parents=True)
+            ident='b'*24
+            record={'id':3,'description':'VMM-'+ident,'status':'complete','type':'full','archivename':'backend.jpa','absolute_path':'/vmm-projects/demo/site/administrator/backups/backend.jpa','multipart':1}
+            def execute(p,args,**kwargs):
+                if 'akeeba:backup:take' in args:
+                    (native/'backend.jpa').write_bytes(b'JPA-native-backup')
+                    return b'Backup successful'
+                return json.dumps([record]).encode()
+            p={'slug':'demo','cms':'joomla','storage':'shared','status':'running'}
+            with patch.object(akeeba,'DATA',root),patch.object(akeeba,'project',return_value=p),patch.object(akeeba,'capability',return_value={'available':True}),patch.object(akeeba.secrets,'token_hex',return_value=ident),patch('operations.folder',return_value=site.parent),patch('operations.write_tools'),patch('operations.exec_php',side_effect=execute):
+                result=akeeba.create('demo')
+            self.assertIn('Download verfügbar',result)
+            stage=root/'backups'/ident
+            self.assertEqual(json.loads((stage/'manager-backup.json').read_text())['status'],'unverified')
+            self.assertEqual((stage/'backend.jpa').read_bytes(),(native/'backend.jpa').read_bytes())

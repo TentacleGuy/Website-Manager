@@ -409,3 +409,13 @@ class RecycleApiTests(unittest.TestCase):
             self.assertEqual(self.request('/api/recycle/'+token+'/restore',{})[0],200);self.assertEqual(file.read_bytes(),b'API fixture')
         finally:
             recycle_service.save_settings(before);file.unlink(missing_ok=True)
+
+    def test_unverified_native_archive_can_be_downloaded_but_is_not_a_verified_import(self):
+        import secrets
+        group=secrets.token_hex(12);root=server.DATA/'backups'/group;root.mkdir(parents=True)
+        (root/'site.jpa').write_bytes(b'JPA-native')
+        (root/'manager-backup.json').write_text(json.dumps({'status':'unverified','files':['site.jpa']}))
+        self.assertEqual(self.request('/api/backups/'+group+'/site.jpa',get=True)[0],200)
+        self.assertEqual(self.request('/api/backup-bundles/'+group+'.zip',get=True)[0],200)
+        _,groups=self.request('/api/backups',get=True)
+        self.assertNotIn(group,{x['id'] for x in groups['backups']})

@@ -32,7 +32,7 @@ def listing(name):
             file=folder/'manager-backup.json'
             try:info=json.loads(file.read_text())
             except (OSError,ValueError):continue
-            if info.get('project')!=name or info.get('status') not in ('complete','error'):continue
+            if info.get('project')!=name or info.get('status') not in ('complete','unverified','error'):continue
             files=[]
             for entry in info.get('files',[]):
                 path=folder/entry
@@ -51,6 +51,81 @@ def json_records(raw):
         if isinstance(value,list):return value
         if isinstance(value,dict) and value and all(isinstance(x,dict) for x in value.values()):return list(value.values())
     raise ValueError('Akeeba hat keinen lesbaren Sicherungsstatus geliefert.')
+
+
+def archive_names(filename, parts):
+    if not isinstance(filename,str) or not re.fullmatch(r'[A-Za-z0-9_.-]+\.jpa',filename,re.I):
+        raise ValueError('Akeeba meldet einen ungültigen JPA-Archivnamen.')
+    parts=max(1,int(parts or 1))
+    if parts>10000:raise ValueError('Akeeba meldet eine ungültige Anzahl Archivteile.')
+    base=filename[:-4]
+    return [filename]+[base+'.j'+str(i).zfill(2) for i in range(1,parts)]
+
+
+def validate_archives(folder,names):
+    if any(not (folder/name).is_file() or (folder/name).is_symlink() or (folder/name).stat().st_size==0 for name in names):
+        raise ValueError('Akeeba-Sicherung ist unvollständig: Mindestens ein Archivteil fehlt.')
+    # Akeeba puts the JPA header in the FIRST part (.j01 for split archives),
+    # while the final part always retains the .jpa extension.
+    first=folder/(names[1] if len(names)>1 else names[0])
+    with first.open('rb') as stream:
+        if stream.read(3)!=b'JPA':raise ValueError('Akeeba hat kein gültiges JPA-Archiv erzeugt.')
+
+
+def reconcile(name):
+    """Recover this manager's failed attempts from native, completed records."""
+    import operations as op
+    from store import redact
+    p=project(name)
+    if p.get('restore') or p['status']!='running':raise ValueError('Das vollständig eingerichtete Projekt zuerst starten.')
+    site=op.folder(p)/'site';tools=op.folder(p)/'tools';tools.mkdir(parents=True,exist_ok=True)
+    shutil.copyfile(Path(__file__).parent/'tools/akeeba-backup-record.php',tools/'akeeba-backup-record.php')
+    root=DATA/'backups';recovered=0;errors=[]
+    for folder in sorted(root.iterdir()) if root.exists() else []:
+        if folder.is_symlink() or not folder.is_dir() or not re.fullmatch(r'[a-f0-9]{24}',folder.name):continue
+        meta=folder/'manager-backup.json'
+        if meta.is_symlink():continue
+        try:info=json.loads(meta.read_text())
+        except (OSError,ValueError):continue
+        if info.get('project')!=name or info.get('status')!='error':continue
+        try:
+            description='VMM-'+folder.name
+            rows=json_records(op.exec_php(p,['php','/vmm-tools/akeeba-backup-record.php'],input=json.dumps({'description':description,'profile':info.get('profile',1)}).encode(),timeout=120))
+            record=next((r for r in rows if r.get('description')==description and r.get('status')=='complete' and r.get('type')=='full'),None)
+            if not record:raise ValueError('Akeeba bestätigt für diesen Versuch kein abgeschlossenes vollständiges Website-Backup.')
+            names=archive_names(record.get('archivename'),record.get('multipart'))
+            native=record.get('absolute_path','')
+            if not isinstance(native,str) or Path(native).name!=names[0]:raise ValueError('Akeeba meldet einen ungültigen Archivpfad.')
+            # Translate only mounts belonging to this project or this backup.
+            prefixes={'/vmm-projects/'+name+'/site':site,'/var/www/html':site,'/vmm-backups/'+folder.name:folder}
+            source=None
+            for prefix,local in prefixes.items():
+                if native.startswith(prefix+'/'):
+                    relative=Path(native[len(prefix)+1:])
+                    if '..' in relative.parts:raise ValueError('Ungültiger Archivpfad.')
+                    candidate=local/relative
+                    if candidate.resolve().is_relative_to(local.resolve()):source=candidate.parent
+                    break
+            if source is None:raise ValueError('Das Archiv liegt außerhalb der freigegebenen Projekt- und Backupordner.')
+            validate_archives(source,names)
+            hashes={file:op.digest(source/file) for file in names}
+            for file in names:
+                if (source/file).resolve()==(folder/file).resolve():continue
+                temp=folder/(file+'.recovering-'+secrets.token_hex(6))
+                try:
+                    with (source/file).open('rb') as incoming,temp.open('xb') as outgoing:shutil.copyfileobj(incoming,outgoing)
+                    temp.chmod(0o600)
+                    if op.digest(temp)!=hashes[file] or op.digest(source/file)!=hashes[file]:raise ValueError('Das Archiv wurde während der Übernahme verändert.')
+                    temp.replace(folder/file)
+                finally:temp.unlink(missing_ok=True)
+            validate_archives(folder,names)
+            info.pop('error',None)
+            info.update(status='unverified',files=names,native_id=str(record['id']),sha256=hashes,warning='Akeeba hat das Backup erfolgreich abgeschlossen. Die ursprünglichen Serverdateien wurden vom Manager nicht bestätigt; keine geprüfte Produktionssicherung.',native_status='complete')
+            temp=meta.with_suffix('.new');temp.write_text(json.dumps(info));temp.replace(meta);recovered+=1
+        except Exception as error:
+            info['error']=redact(str(error));meta.write_text(json.dumps(info));errors.append(info['error'])
+    if errors and not recovered:raise ValueError('Vorhandenes Backup konnte nicht übernommen werden: '+errors[0])
+    return str(recovered)+' vorhandene Akeeba-Sicherung(en) übernommen.'+(' Weitere Versuche konnten nicht übernommen werden; Details im Backup-Eintrag.' if errors else '')
 
 
 def create(name,profile=1,verify=False):
@@ -95,27 +170,34 @@ def create(name,profile=1,verify=False):
         rows=json_records(raw)
         record=next((r for r in rows if r.get('description')==description and r.get('status')=='complete'),None)
         if not record:raise ValueError('Akeeba hat die Sicherung nicht als vollständig abgeschlossen bestätigt. Dateien bleiben als unvollständige Sicherung zur Diagnose erhalten.')
-        if required:
-            try:seen=json.loads(report.read_text())
-            except (OSError,ValueError):seen={}
-            missing=[name for name in required if not isinstance(seen,dict) or not seen.get(name)]
-            if missing:
-                raise ValueError('Akeeba hat nicht alle ursprünglichen Serverdateien gesichert: '+', '.join(missing)+'. Der Sicherungsnachweis fehlt; mögliche Ursachen sind Datei-Ausschlüsse oder eine nicht geladene Archiv-Anbindung. Das Archiv wird nicht als vollständig angeboten.')
-        main=stage/(filename+'.jpa')
-        parts=max(1,int(record.get('multipart') or 1))
-        if parts>10000:raise ValueError('Akeeba meldet eine ungültige Anzahl Archivteile.')
-        names=[filename+'.jpa']+[filename+'.j'+str(i).zfill(2) for i in range(1,parts)]
-        if any(not (stage/file).is_file() or (stage/file).is_symlink() or (stage/file).stat().st_size==0 for file in names):raise ValueError('Akeeba-Sicherung ist unvollständig: Mindestens ein Archivteil fehlt.')
-        with main.open('rb') as stream:
-            if stream.read(3)!=b'JPA':raise ValueError('Akeeba hat kein gültiges JPA-Hauptarchiv erzeugt.')
+        names=archive_names(filename+'.jpa',record.get('multipart'))
+        validate_archives(stage,names)
+        try:seen=json.loads(report.read_text()) if required else {}
+        except (OSError,ValueError):seen={}
+        missing=[entry for entry in required if not isinstance(seen,dict) or not seen.get(entry)]
         info={'project':name,'created':int(time.time()),'profile':profile,'status':'complete','files':names,'restored_server_files':[name for name in SERVER_FILES if name in required],'native_id':str(record.get('id','')),'sha256':{file:op.digest(stage/file) for file in names}}
+        if missing:
+            info.update(status='unverified',native_status='complete',warning='Akeeba hat das Backup erfolgreich abgeschlossen. Der Sicherungsnachweis für ursprüngliche Serverdateien fehlt: '+', '.join(missing)+'. Keine geprüfte Produktionssicherung.')
         metadata.write_text(json.dumps(info))
     except Exception as error:
         from store import redact
         metadata.write_text(json.dumps({'project':name,'created':int(time.time()),'profile':profile,'status':'error','files':[],'error':redact(str(error))}))
+        # The native CLI may have kept its profile's output location. Recover
+        # that completed archive instead of reporting that no backup exists.
+        if locals().get('record'):
+            try:
+                reconcile(name)
+                recovered=json.loads(metadata.read_text())
+                if recovered.get('status')=='unverified':
+                    if verify:raise ValueError('Das Archiv steht zum Download bereit; ursprüngliche Serverdateien sind noch nicht bestätigt.')
+                    return 'Akeeba-Backup aus dem Projektordner übernommen und zum Download verfügbar. '+recovered['warning']
+            except Exception:
+                if json.loads(metadata.read_text()).get('status')=='unverified':raise
         raise
+    if verify and info['status']=='unverified':raise ValueError('Das Archiv steht zum Download bereit; die ursprünglichen Serverdateien sind noch nicht bestätigt.')
     if verify:
         from verification_service import run
         try:run('backup',ident,p['php'],completed_backup=True)
         except Exception as e:raise ValueError('Das Akeeba-Backup wurde erstellt und bleibt erhalten; die Wiederherstellungsprobe ist fehlgeschlagen: '+str(e)) from None
+    if info['status']=='unverified':return 'Akeeba-Backup erstellt und zum Download verfügbar. '+info['warning']
     return 'Akeeba-Backup erstellt: '+filename+'.jpa · '+str(len(names))+' Archivteile. Download im Projekt unter Akeeba-Backups.'

@@ -195,7 +195,7 @@ class Handler(BaseHTTPRequestHandler):
             if bundle:
                 folder=DATA/'backups'/bundle[1]
                 info=json.loads((folder/'manager-backup.json').read_text())
-                if folder.is_symlink() or info.get('status')!='complete':raise ValueError('Backup ist noch nicht vollständig.')
+                if folder.is_symlink() or info.get('status') not in ('complete','unverified'):raise ValueError('Backup ist noch nicht vollständig.')
                 files=info.get('files',[])
                 if not files or any(not re.fullmatch(r'[A-Za-z0-9_.-]+\.(jpa|jps|zip|j\d+|z\d+)',n,re.I) or not (folder/n).is_file() or (folder/n).is_symlink() for n in files):raise ValueError('Mindestens ein Archivteil fehlt.')
                 self.send_response(200);self.send_header('Content-Type','application/zip');self.send_header('Content-Disposition','attachment; filename="akeeba-'+bundle[1]+'.zip"');self.send_header('Connection','close');self.end_headers();self.close_connection=True
@@ -209,7 +209,10 @@ class Handler(BaseHTTPRequestHandler):
                 folder=DATA/'backups'/group;file=folder/name
                 if folder.is_symlink() or file.is_symlink() or not file.is_file():raise ValueError('Backup-Datei nicht gefunden.')
                 metadata=folder/'manager-backup.json'
-                if metadata.exists() and json.loads(metadata.read_text()).get('status')!='complete':raise ValueError('Backup ist noch nicht vollständig.')
+                if metadata.exists():
+                    info=json.loads(metadata.read_text())
+                    if info.get('status') not in ('complete','unverified'):raise ValueError('Backup ist noch nicht vollständig.')
+                    if info.get('status')=='unverified' and name not in info.get('files',[]):raise ValueError('Dieses Archivteil wurde nicht übernommen.')
                 self.send_response(200);self.send_header('Content-Type','application/octet-stream');self.send_header('Content-Disposition','attachment; filename="'+name+'"');self.send_header('Content-Length',str(file.stat().st_size));self.end_headers()
                 with file.open('rb') as stream:shutil.copyfileobj(stream,self.wfile)
                 return
@@ -515,6 +518,9 @@ class Handler(BaseHTTPRequestHandler):
                     choice=body.get('kickstart',p.get('kickstart','auto'))
                     with db() as c:c.execute('UPDATE projects SET kickstart=? WHERE slug=?',(choice,name))
                     return self.send(202,{'job':job(name,'akeeba',lambda:restore_akeeba(name,group,archive,password))})
+                if action=='akeeba-reconcile':
+                    import akeeba_service
+                    return self.send(202,{'job':job(name,'akeeba-backup',lambda:akeeba_service.reconcile(name))})
                 if action=='akeeba-backup':
                     import akeeba_service
                     return self.send(202,{'job':job(name,action,lambda:akeeba_service.create(name,body.get('profile',1),body.get('verify',False)))})

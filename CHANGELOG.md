@@ -6,6 +6,12 @@ Alle wesentlichen Änderungen am Website Manager werden hier dokumentiert. Neue 
 
 Noch keine Änderungen.
 
+## [2.0.3] - 2026-11-03
+
+### Behoben
+
+- Vorhandene, vom Manager gestartete Akeeba-Backups lassen sich mit dem CMS-Backend abgleichen und aus dem Projektordner übernehmen, ohne die Originalarchive zu verschieben. Alle gemeldeten Archivteile und der JPA-Dateikopf im ersten Teil werden geprüft. Downloads funktionieren auch bei fehlendem Nachweis ursprünglicher Serverdateien; diese Archive werden ausdrücklich als ungeprüft statt als defekt gekennzeichnet und nicht als geprüfte Wiederherstellungsquelle angeboten.
+
 ## [2.0.2] - 2026-11-03
 
 ### Verbessert
