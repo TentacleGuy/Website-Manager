@@ -28,6 +28,8 @@ Im Projekt **Akeeba Backup erstellen** wählen, ein vorhandenes Akeeba-Profil au
 
 Der Manager übersteuert die Ausgabe für diesen Lauf auf ein lokales JPA-Archiv ohne Cloud-Nachbearbeitung, Löschquoten oder Abschluss-E-Mails. Gespeicherte Profile bleiben unverändert; ihre Filter wirken weiterhin. Erst nach Abschluss und Prüfung der Archivteile wird der Download freigegeben.
 
+Fehlgeschlagene Versuche werden als **Fehlgeschlagener Backup-Versuch** und **Keine vollständige Sicherung** angezeigt. Ihre Verwaltungsdaten oder Restdateien sind kein verwendbares Backup. Der Manager prüft Akeebas Abschlussstatus, die Archivteile und den Sicherungsnachweis der ursprünglichen Serverdateien. Ein grüner Abschluss im Akeeba-Backend ersetzt diesen zusätzlichen Nachweis nicht. Die Fehlerursache bleibt im Activity Log und bei neuen fehlgeschlagenen Versuchen in den Backup-Details sichtbar.
+
 **Akeeba Backup herunterladen** lädt die neueste vollständige Sicherung. Bei mehreren Teilen wird ein äußeres Download-ZIP verwendet. Dieses zuerst entpacken und beim Import Hauptarchiv und alle Teile zusammen verwenden.
 
 ## Wiederherstellungsprüfung

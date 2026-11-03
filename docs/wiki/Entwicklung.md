@@ -7,8 +7,8 @@ Der Manager besteht aus einer Python-HTTP-API mit SQLite, einer Browseroberfläc
 Für den dokumentierten Release-Stand mit lokalem Docker, Compose, Python 3.12 und mkcert ausführen:
 
 ```sh
-git clone --branch v2.0.1 --depth 1 https://github.com/TentacleGuy/Website-Manager.git Website-Manager-2.0.1
-cd Website-Manager-2.0.1
+git clone --branch v2.0.2 --depth 1 https://github.com/TentacleGuy/Website-Manager.git Website-Manager-2.0.2
+cd Website-Manager-2.0.2
 python3 -m venv .venv
 . .venv/bin/activate
 python3 -m pip install -r requirements.txt

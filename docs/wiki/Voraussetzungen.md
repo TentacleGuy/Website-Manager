@@ -27,6 +27,6 @@ Administratorrechte können für Docker, DNS und das Vertrauen in das lokale Zer
 
 Der Manager öffnet sich auf `http://localhost:8090/`, phpMyAdmin auf `http://localhost:8091/`. Projektadressen haben die Form `projektname.vmm.test` mit einem PHP-abhängigen Port.
 
-Der Manager besitzt keine Anmeldung und steuert Docker sowie gespeicherte Zugangsdaten. `VMM_BIND=0.0.0.0` in `.env` öffnet allein die Manager-Bindung für Netzwerkzugriffe. Für einen tatsächlichen LAN-Betrieb sind zusätzlich Firewall, Gateway-Bindungen, DNS und Zertifikatsvertrauen zu berücksichtigen. Die Setup-Pakete konfigurieren die Gateway-Ports zunächst lokal. Keine Router-Portfreigabe ins Internet einrichten.
+Der Manager besitzt keine Anmeldung und steuert Docker sowie gespeicherte Zugangsdaten. `TENTACLE_BIND=0.0.0.0` in `.env` öffnet allein die Manager-Bindung für Netzwerkzugriffe. Für einen tatsächlichen LAN-Betrieb sind zusätzlich Firewall, Gateway-Bindungen, DNS und Zertifikatsvertrauen zu berücksichtigen. Die Setup-Pakete konfigurieren die Gateway-Ports zunächst lokal. Keine Router-Portfreigabe ins Internet einrichten.
 
 Weiter: [Windows](Installation-Windows.md), [macOS](Installation-macOS.md), [Linux](Installation-Linux.md) oder [Quellcodebetrieb](Entwicklung.md).

@@ -1,6 +1,6 @@
 # Installation unter Windows
 
-Verwende das Windows-Setup aus den [Releases](https://github.com/TentacleGuy/Website-Manager/releases). Die folgenden Schritte beschreiben den Installer der Version 2.0.1.
+Verwende das Windows-Setup aus den [Releases](https://github.com/TentacleGuy/Website-Manager/releases). Die folgenden Schritte beschreiben den Installer der Version 2.0.2.
 
 ## Einrichten
 
@@ -11,7 +11,7 @@ Verwende das Windows-Setup aus den [Releases](https://github.com/TentacleGuy/Web
 5. Die Einrichtung lokaler Projektadressen und des Zertifikats abschließen.
 6. Warten, bis der Installer den erfolgreichen Abschluss meldet und den Browser öffnet.
 
-Der Standardordner lautet `%LOCALAPPDATA%\Tentacle\WebsiteManager`. Ein abweichendes `VMM_INSTALL_DIR` muss bei einer erneuten Einrichtung wieder auf denselben Ordner zeigen. Ein bereits belegter, nicht als Manager-Installation markierter Zielordner wird abgewiesen.
+Der Standardordner lautet `%LOCALAPPDATA%\Tentacle\WebsiteManager`. Ein abweichendes `TENTACLE_INSTALL_DIR` muss bei einer erneuten Einrichtung wieder auf denselben Ordner zeigen. Ein bereits belegter, nicht als Manager-Installation markierter Zielordner wird abgewiesen.
 
 ## Später starten
 

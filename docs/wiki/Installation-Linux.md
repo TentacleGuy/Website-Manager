@@ -18,7 +18,7 @@ Unter Linux müssen Docker Engine und das Compose-Plugin bereits installiert und
    sudo bash Systemeinrichtung.sh
    ```
 
-Der Standardordner lautet `${XDG_DATA_HOME:-$HOME/.local/share}/Tentacle/WebsiteManager`. Ein individuelles Ziel lässt sich über `VMM_INSTALL_DIR` vorgeben.
+Der Standardordner lautet `${XDG_DATA_HOME:-$HOME/.local/share}/Tentacle/WebsiteManager`. Ein individuelles Ziel lässt sich über `TENTACLE_INSTALL_DIR` vorgeben.
 
 ## DNS und Zertifikate
 

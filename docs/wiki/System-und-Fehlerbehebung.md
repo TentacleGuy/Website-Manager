@@ -10,6 +10,12 @@ Eigene Dienste können je Zustand gestartet, neu gestartet oder beendet werden. 
 
 Nach dem Beenden des Managers die lokale **Starten**-Datei verwenden. Ein beendeter Manager kann Docker Desktop oder Docker Engine nicht selbst wieder starten. Fehlende Gateway-/DNS-Container werden durch die lokale Startdatei eingerichtet.
 
+## Docker-Namen und Konfiguration
+
+Die gemeinsame Laufzeit verwendet standardmäßig `tentacle-runtime`, Manager- und PHP-Images verwenden ebenfalls Tentacle-Namen. Eine bisherige Standardlaufzeit wird bei ihrer nächsten Verwendung umgestellt; ihre zuvor laufenden Dienste starten dabei neu. Bestehende Datenbank-Volumes behalten ihre tatsächlichen Namen und Inhalte. Individuell konfigurierte Laufzeitnamen bleiben gültig.
+
+Konfigurationsvariablen heißen `TENTACLE_*`, zum Beispiel `TENTACLE_BIND`, `TENTACLE_HOST_DATA`, `TENTACLE_DOCKER_SOCKET` und `TENTACLE_RUNTIME_PROJECT`. Alte `VMM_*`-Namen bleiben als Rückfall gültig. Ist der entsprechende Tentacle-Wert nicht leer, hat er Vorrang. Eine bestehende `.env` muss nicht manuell umbenannt werden. Interne Pfade, Domains und frühere Datenbank-Volumes können weiterhin `vmm` enthalten.
+
 ## Häufige Probleme
 
 | Problem | Nächster Schritt |
