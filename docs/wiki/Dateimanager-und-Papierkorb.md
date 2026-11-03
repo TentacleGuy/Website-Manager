@@ -9,7 +9,7 @@ Der **Dateimanager** bündelt CMS- und Erweiterungspakete, Akeeba-Archive, Proje
 3. Über Spaltenüberschriften sortieren.
 4. **Dateien anzeigen** für Dateidetails und einzelne Downloads wählen.
 
-Ein zusätzlicher Typ-Dropdown oder einzelne Spaltenfilter sind im Dateimanager von Version 2.0.2 nicht vorhanden. Die Projektübersicht hat dagegen eigene Spaltenfilter.
+Ein zusätzlicher Typ-Dropdown oder einzelne Spaltenfilter sind im Dateimanager von Version 2.0.3 nicht vorhanden. Die Projektübersicht hat dagegen eigene Spaltenfilter.
 
 ## Löschverhalten einstellen
 

@@ -22,4 +22,4 @@ Neue Updatehelfer heißen `tentacle-update-…` und werden nach ihrem Ende autom
 
 Bei dem älteren Windows-Fehler `apply.py: No such file or directory` das aktuelle Windows-Setup vollständig entpacken und `Installieren.cmd` erneut starten. Denselben Installationsordner verwenden; individuelle `TENTACLE_INSTALL_DIR`-Werte beibehalten.
 
-Die verfügbaren Release-Funktionen ergeben sich aus dem [Changelog](https://github.com/TentacleGuy/Website-Manager/blob/main/CHANGELOG.md). Dieses Handbuch gilt für Version 2.0.2; geplante Themen stehen separat in der [Roadmap](Roadmap.md).
+Die verfügbaren Release-Funktionen ergeben sich aus dem [Changelog](https://github.com/TentacleGuy/Website-Manager/blob/main/CHANGELOG.md). Dieses Handbuch gilt für Version 2.0.3; geplante Themen stehen separat in der [Roadmap](Roadmap.md).

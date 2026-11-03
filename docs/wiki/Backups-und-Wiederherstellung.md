@@ -28,7 +28,19 @@ Im Projekt **Akeeba Backup erstellen** wählen, ein vorhandenes Akeeba-Profil au
 
 Der Manager übersteuert die Ausgabe für diesen Lauf auf ein lokales JPA-Archiv ohne Cloud-Nachbearbeitung, Löschquoten oder Abschluss-E-Mails. Gespeicherte Profile bleiben unverändert; ihre Filter wirken weiterhin. Erst nach Abschluss und Prüfung der Archivteile wird der Download freigegeben.
 
-Fehlgeschlagene Versuche werden als **Fehlgeschlagener Backup-Versuch** und **Keine vollständige Sicherung** angezeigt. Ihre Verwaltungsdaten oder Restdateien sind kein verwendbares Backup. Der Manager prüft Akeebas Abschlussstatus, die Archivteile und den Sicherungsnachweis der ursprünglichen Serverdateien. Ein grüner Abschluss im Akeeba-Backend ersetzt diesen zusätzlichen Nachweis nicht. Die Fehlerursache bleibt im Activity Log und bei neuen fehlgeschlagenen Versuchen in den Backup-Details sichtbar.
+Von Akeeba erfolgreich abgeschlossene Archive mit vorhandenen, geprüften Archivteilen stehen zum Download bereit. Ist nur der Nachweis der ursprünglichen Serverdateien unvollständig, erscheint **Serverdateien ungeprüft** mit einer Erläuterung. Das bedeutet nicht, dass Akeeba das Archiv als defekt gemeldet hat. Es ist aber keine vom Manager bestätigte Produktionssicherung und wird nicht als geprüfte Wiederherstellungsquelle angeboten.
+
+### Vorhandenes Backend-Archiv übernehmen
+
+Wenn Akeeba im CMS-Backend ein erfolgreiches Backup zeigt, im Manager aber noch ein fehlgeschlagener Versuch steht:
+
+1. Das Projekt starten und **Projekt → Backups → Vorhandene Backups abgleichen** wählen.
+2. Den Abschluss im **Activity Log** abwarten.
+3. **Neuestes Akeeba Backup herunterladen** oder den Download beim Archiveintrag verwenden.
+
+Der Abgleich sucht die vom Manager gestarteten, bisher fehlgeschlagenen Versuche anhand ihrer Kennung und ihres Profils in Akeebas Datenbank. Er übernimmt ausschließlich abgeschlossene vollständige Website-Backups aus den freigegebenen Projekt- oder Backupordnern. Alle gemeldeten Teile müssen vorhanden sein; bei geteilten JPA-Archiven wird der Dateikopf im ersten Teil geprüft. Die Übernahme kopiert die Archive mit Prüfsummenvergleich und lässt die Originale im CMS unverändert. Sie benötigt entsprechend freien Speicherplatz. Beliebige ältere, direkt im CMS gestartete Backups werden damit nicht importiert.
+
+Der Abgleich bestätigt keinen zuvor fehlenden Nachweis der ursprünglichen Serverdateien. Solche übernommenen Archive bleiben entsprechend als ungeprüft gekennzeichnet. Fehlende Dateien oder ein von Akeeba nicht bestätigter Abschluss bleiben echte Fehler; Details stehen im Backup-Eintrag und im Activity Log.
 
 **Akeeba Backup herunterladen** lädt die neueste vollständige Sicherung. Bei mehreren Teilen wird ein äußeres Download-ZIP verwendet. Dieses zuerst entpacken und beim Import Hauptarchiv und alle Teile zusammen verwenden.
 
