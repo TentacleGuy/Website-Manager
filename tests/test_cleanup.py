@@ -57,6 +57,17 @@ class CleanupTests(unittest.TestCase):
         self.assertFalse(file.exists());self.assertEqual((site/'plugin.php').read_text(),'installed')
         with db() as c:self.assertIsNone(c.execute('SELECT id FROM extension_sources WHERE id=?',(source,)).fetchone())
 
+    def test_backup_purpose_uses_metadata_instead_of_filename(self):
+        folder=self.root/'backups'/self.ident;folder.mkdir(parents=True)
+        (folder/'vmm-example.zip').write_bytes(b'archive')
+        item=next(x for x in cleanup.inventory()['items'] if x['id']==self.ident)
+        self.assertEqual(item['backup_purpose'],'import')
+        self.assertIsNone(item['source_project'])
+        (folder/'manager-backup.json').write_text(json.dumps({'project':'example','status':'error'}))
+        item=next(x for x in cleanup.inventory()['items'] if x['id']==self.ident)
+        self.assertEqual(item['backup_purpose'],'live')
+        self.assertEqual(item['source_project'],'example')
+
     def test_all_backup_parts_are_removed_together(self):
         folder=self.root/'backups'/self.ident;folder.mkdir(parents=True)
         for name in ('site.jpa','site.j01','site.j02'):(folder/name).write_bytes(b'part')

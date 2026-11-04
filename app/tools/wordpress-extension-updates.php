@@ -3,6 +3,12 @@
  * Description: Native update integration for the premium sources configured locally in VMM.
  */
 if (!defined('ABSPATH')) exit;
+// Manager credentials and overrides stay outside the exported website/database.
+$vmmOptionsFile=__VMM_LOCAL_OPTIONS_FILE__;
+$vmmOptions=is_file($vmmOptionsFile)?json_decode(file_get_contents($vmmOptionsFile),true):[];
+foreach (is_array($vmmOptions)?$vmmOptions:[] as $vmmName=>$vmmValue) {
+    add_filter('pre_option_'.$vmmName,function()use($vmmValue){return $vmmValue;});
+}
 function vmm_extension_request($url,$data,$auth=true) {
     $s=$data['source'];$c=$data['credentials'];$args=['timeout'=>30,'redirection'=>0];
     if ($auth) {
@@ -16,7 +22,7 @@ function vmm_extension_request($url,$data,$auth=true) {
     return [$url,$args];
 }
 function vmm_extension_release($id,$data) {
-    $cache=get_transient('vmm_release_'.$id);if (is_array($cache)) return $cache;
+    $cache=wp_cache_get('vmm_release_'.$id,'vmm');if (is_array($cache)) return $cache;
     $s=$data['source'];if (($s['source_type'] ?? '') !== 'update_xml') return null;
     [$url,$args]=vmm_extension_request($s['url'],$data,!empty($s['auth_metadata']));
     $response=wp_remote_get($url,$args);if (is_wp_error($response) || wp_remote_retrieve_response_code($response)!==200) return null;
@@ -30,7 +36,7 @@ function vmm_extension_release($id,$data) {
         if ((string)$update->php_minimum && version_compare(PHP_VERSION,(string)$update->php_minimum,'<')) continue;
         if (!$best || version_compare($version,$best['version'],'>')) $best=['version'=>$version,'url'=>$package];
     }
-    if ($best) set_transient('vmm_release_'.$id,$best,3600);return $best;
+    if ($best) wp_cache_set('vmm_release_'.$id,$best,'vmm',3600);return $best;
 }
 function vmm_extension_updates($transient,$kind) {
     if (!is_object($transient)) return $transient;
@@ -55,7 +61,7 @@ add_filter('pre_set_site_transient_update_plugins',function($t){return vmm_exten
 add_filter('pre_set_site_transient_update_themes',function($t){return vmm_extension_updates($t,'theme');},9999);
 add_filter('http_request_args',function($args,$url){
     foreach (get_option('vmm_extension_sources',[]) as $id=>$data) {
-        $release=get_transient('vmm_release_'.$id);if (!is_array($release)) continue;
+        $release=wp_cache_get('vmm_release_'.$id,'vmm');if (!is_array($release)) continue;
         $a=wp_parse_url($url);$b=wp_parse_url($release['url']);
         if (($a['scheme'] ?? '')==='https' && ($a['host'] ?? '')===($b['host'] ?? '') && ($a['path'] ?? '')===($b['path'] ?? '')) {
             [, $auth]=vmm_extension_request($url,$data);$args['headers']=array_merge((array)($args['headers'] ?? []),$auth['headers'] ?? []);$args['redirection']=0;

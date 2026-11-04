@@ -194,7 +194,7 @@ def restore_export(filename,name):
             info['url']='http://'+name+'.vmm.test:'+str(ports(p['php'])[0])
             op.exec_php(p,['env','VMM_VERIFICATION=1','php','/vmm-tools/verification-config.php'],input=json.dumps(info).encode())
             if p['cms']=='wordpress':
-                for key in ('home','siteurl'):op.exec_php(p,['wp','--allow-root','--skip-plugins','--skip-themes','option','update',key,info['url']])
+                op.finalize_restore(name)
             shutil.rmtree(root/'restore');op.transition(name,'start')
             return 'Projektsicherung als '+name+' wiederhergestellt.'
         except Exception as e:

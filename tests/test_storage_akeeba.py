@@ -263,6 +263,17 @@ class AkeebaRecoveryTests(unittest.TestCase):
         self.assertIn('nicht bestätigt',info['warning'])
         self.assertIn('0 vorhandene',akeeba.reconcile('demo'))
 
+    def test_recovers_zip_after_previous_jpa_only_error(self):
+        self.meta.write_text(json.dumps({'project':'demo','status':'error','profile':1,'created':1,'files':[], 'error':'Akeeba meldet einen ungültigen JPA-Archivnamen.'}))
+        (self.native/'site.zip').write_bytes(b'PK00PK\x03\x04original-zip')
+        self.record.update(archivename='site.zip',absolute_path='/vmm-projects/demo/site/administrator/backups/site.zip')
+        akeeba.reconcile('demo')
+        info=json.loads(self.meta.read_text())
+        self.assertEqual(info['status'],'unverified')
+        self.assertEqual(info['files'],['site.zip'])
+        self.assertNotIn('error',info)
+        self.assertEqual((self.stage/'site.zip').read_bytes(),(self.native/'site.zip').read_bytes())
+
     def test_multipart_header_is_checked_in_first_part(self):
         (self.native/'site.jpa').write_bytes(b'final-part')
         (self.native/'site.j01').write_bytes(b'JPA-first-part');self.record['multipart']=2
@@ -306,3 +317,16 @@ class AkeebaCreationRecoveryTests(unittest.TestCase):
             stage=root/'backups'/ident
             self.assertEqual(json.loads((stage/'manager-backup.json').read_text())['status'],'unverified')
             self.assertEqual((stage/'backend.jpa').read_bytes(),(native/'backend.jpa').read_bytes())
+
+
+class ArchiveFormatTests(unittest.TestCase):
+    def test_zip_and_split_zip_are_recognized_and_checked(self):
+        self.assertEqual(akeeba.archive_names('backup.zip',3),['backup.zip','backup.z01','backup.z02'])
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            (root/'backup.zip').write_bytes(b'PK\x03\x04example')
+            akeeba.validate_archives(root,['backup.zip'])
+            (root/'backup.z01').write_bytes(b'PK\x07\x08example')
+            akeeba.validate_archives(root,['backup.zip','backup.z01'])
+            (root/'backup.z01').write_bytes(b'broken')
+            with self.assertRaisesRegex(ValueError,'ZIP'):akeeba.validate_archives(root,['backup.zip','backup.z01'])

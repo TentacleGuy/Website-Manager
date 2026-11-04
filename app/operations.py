@@ -318,9 +318,11 @@ def finalize_restore(name):
         path=site/'configuration.php'
         if not path.exists(): raise ValueError('Joomla-Konfiguration fehlt.')
         content=path.read_text()
-        content=re.sub(r"(public\s+\$live_site\s*=\s*)[^;]*;",r"\1'';",content)
-        content=re.sub(r"(public\s+\$force_ssl\s*=\s*)[^;]*;",r'\g<1>0;',content)
-        content=re.sub(r"(public\s+\$mailonline\s*=\s*)[^;]*;",r'\g<1>false;',content)
+        # Restrict local-only changes to routing, cookies, mail and DB transport.
+        # The preserved source file is used unchanged for every project export.
+        for key,value in (('live_site',"''"),('force_ssl','0'),('mailonline','false'),('cookie_domain',"''"),('cookie_path',"''"),('dbencryption','0'),('dbsslverifyservercert','false')):
+            pattern=r'(public\s+\$'+key+r'''\s*=\s*)(?:'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|[^;]+);'''
+            content=re.sub(pattern,lambda m:m[1]+value+';',content)
         path.write_text(content)
     else:
         if not (site/'wp-config.php').exists(): raise ValueError('WordPress-Konfiguration fehlt.')

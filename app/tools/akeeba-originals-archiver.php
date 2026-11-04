@@ -2,7 +2,7 @@
 namespace Akeeba\Engine\Archiver;
 
 /** Remap archive entries only; never change the running website's files. */
-class Vmmjpa extends Jpa
+trait VmmOriginalEntries
 {
     protected function _addFile($isVirtual, &$sourceNameOrData, $targetName)
     {
@@ -10,8 +10,8 @@ class Vmmjpa extends Jpa
         if (!$isVirtual && is_string($sourceNameOrData)) {
             $root = realpath(getenv('VMM_PROJECT_ROOT') ?: getcwd());
             $source = realpath($sourceNameOrData);
-            if ($root !== false && $source !== false && dirname($source) === $root) {
-                $name = basename($source);
+            if ($root !== false && $source !== false && strpos($source, $root . DIRECTORY_SEPARATOR) === 0) {
+                $name = str_replace(DIRECTORY_SEPARATOR, '/', substr($source, strlen($root) + 1));
                 $map = json_decode(file_get_contents(__DIR__ . '/akeeba-originals.json'), true);
                 if (!is_array($map)) throw new \RuntimeException('Serverdatei-Zuordnung ist ungültig.');
                 if (array_key_exists($name, $map)) {
@@ -34,4 +34,9 @@ class Vmmjpa extends Jpa
         }
         return $result;
     }
+}
+
+class Vmmjpa extends Jpa { use VmmOriginalEntries; }
+if (class_exists(__NAMESPACE__ . '\\Zip')) {
+    class Vmmzip extends Zip { use VmmOriginalEntries; }
 }

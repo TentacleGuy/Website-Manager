@@ -54,12 +54,12 @@ def json_records(raw):
 
 
 def archive_names(filename, parts):
-    if not isinstance(filename,str) or not re.fullmatch(r'[A-Za-z0-9_.-]+\.jpa',filename,re.I):
-        raise ValueError('Akeeba meldet einen ungültigen JPA-Archivnamen.')
+    if not isinstance(filename,str) or not re.fullmatch(r'[A-Za-z0-9_.-]+\.(?:jpa|zip)',filename,re.I):
+        raise ValueError('Akeeba meldet einen ungültigen Archivnamen.')
     parts=max(1,int(parts or 1))
     if parts>10000:raise ValueError('Akeeba meldet eine ungültige Anzahl Archivteile.')
-    base=filename[:-4]
-    return [filename]+[base+'.j'+str(i).zfill(2) for i in range(1,parts)]
+    base=filename[:-4];part_prefix='.z' if filename.lower().endswith('.zip') else '.j'
+    return [filename]+[base+part_prefix+str(i).zfill(2) for i in range(1,parts)]
 
 
 def validate_archives(folder,names):
@@ -69,7 +69,12 @@ def validate_archives(folder,names):
     # while the final part always retains the .jpa extension.
     first=folder/(names[1] if len(names)>1 else names[0])
     with first.open('rb') as stream:
-        if stream.read(3)!=b'JPA':raise ValueError('Akeeba hat kein gültiges JPA-Archiv erzeugt.')
+        header=stream.read(4)
+        # Akeeba ZIPs may prepend the PK00 spanning marker to the first local header.
+        if header==b'PK00':header=stream.read(4)
+        if names[0].lower().endswith('.zip'):
+            if header not in (b'PK\x03\x04',b'PK\x07\x08',b'PK\x05\x06'):raise ValueError('Akeeba hat kein gültiges ZIP-Archiv erzeugt.')
+        elif header[:3]!=b'JPA':raise ValueError('Akeeba hat kein gültiges JPA-Archiv erzeugt.')
 
 
 def reconcile(name):
@@ -143,7 +148,7 @@ def create(name,profile=1,verify=False):
     metadata.write_text(json.dumps({'project':name,'created':int(time.time()),'profile':profile,'status':'creating','files':[]}))
     try:
         tools=op.folder(p)/'tools'
-        from project_files import archive_mapping,SERVER_FILES
+        from project_files import archive_mapping,SERVER_FILES,original_config_missing
         mapping,required=archive_mapping(op.folder(p)/'site',tools)
         report=tools/'akeeba-originals-report.json'
         report.unlink(missing_ok=True)
@@ -170,12 +175,13 @@ def create(name,profile=1,verify=False):
         rows=json_records(raw)
         record=next((r for r in rows if r.get('description')==description and r.get('status')=='complete'),None)
         if not record:raise ValueError('Akeeba hat die Sicherung nicht als vollständig abgeschlossen bestätigt. Dateien bleiben als unvollständige Sicherung zur Diagnose erhalten.')
-        names=archive_names(filename+'.jpa',record.get('multipart'))
+        names=archive_names(record.get('archivename') or filename+'.jpa',record.get('multipart'))
         validate_archives(stage,names)
         try:seen=json.loads(report.read_text()) if required else {}
         except (OSError,ValueError):seen={}
         missing=[entry for entry in required if not isinstance(seen,dict) or not seen.get(entry)]
-        info={'project':name,'created':int(time.time()),'profile':profile,'status':'complete','files':names,'restored_server_files':[name for name in SERVER_FILES if name in required],'native_id':str(record.get('id','')),'sha256':{file:op.digest(stage/file) for file in names}}
+        if p.get('backup_group') and original_config_missing(op.folder(p)/'site',p['cms']):missing.append('ursprüngliche CMS-Konfiguration (älterer Import ohne Sicherung)')
+        info={'project':name,'created':int(time.time()),'profile':profile,'status':'complete','files':names,'restored_server_files':[name for name in SERVER_FILES if name in required],'restored_original_files':required,'native_id':str(record.get('id','')),'sha256':{file:op.digest(stage/file) for file in names}}
         if missing:
             info.update(status='unverified',native_status='complete',warning='Akeeba hat das Backup erfolgreich abgeschlossen. Der Sicherungsnachweis für ursprüngliche Serverdateien fehlt: '+', '.join(missing)+'. Keine geprüfte Produktionssicherung.')
         metadata.write_text(json.dumps(info))
@@ -200,4 +206,4 @@ def create(name,profile=1,verify=False):
         try:run('backup',ident,p['php'],completed_backup=True)
         except Exception as e:raise ValueError('Das Akeeba-Backup wurde erstellt und bleibt erhalten; die Wiederherstellungsprobe ist fehlgeschlagen: '+str(e)) from None
     if info['status']=='unverified':return 'Akeeba-Backup erstellt und zum Download verfügbar. '+info['warning']
-    return 'Akeeba-Backup erstellt: '+filename+'.jpa · '+str(len(names))+' Archivteile. Download im Projekt unter Akeeba-Backups.'
+    return 'Akeeba-Backup erstellt: '+names[0]+' · '+str(len(names))+' Archivteile. Download im Projekt unter Akeeba-Backups.'

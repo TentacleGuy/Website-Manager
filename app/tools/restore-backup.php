@@ -31,8 +31,12 @@ try {
         foreach (['offsitedirs', 'publicfolder'] as $key) {
             if (!empty($config[$key])) throw new RuntimeException('Backup enthält externe Verzeichnisse. Automatische Wiederherstellung ist nur für ein einzelnes Website-Verzeichnis möglich.');
         }
-        $config['setup']['siteurl'] = $url;
-        $config['setup']['homeurl'] = $url;
+        // WordPress database URLs must retain their source values. Local
+        // routing is applied through wp-config.php and the manager MU plugin.
+        if (($input['cms'] ?? '') !== 'wordpress') {
+            $config['setup']['siteurl'] = $url;
+            $config['setup']['homeurl'] = $url;
+        }
         $config['setup']['live_site'] = '';
         $config['setup']['force_ssl'] = 0;
         $config['setup']['mailonline'] = false;

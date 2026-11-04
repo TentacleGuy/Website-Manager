@@ -32,6 +32,64 @@ class LocalServerFileTests(unittest.TestCase):
         self.assertEqual(mapping['.htaccess'],'htaccess.txt');self.assertIn('.htaccess',required)
         self.assertEqual(mapping['.user.ini.vmm-original'],'.user.ini')
 
+    def test_cms_original_and_manager_plugin_export(self):
+        site,tools=self.fixture()
+        original="<?php class JConfig {public $sitename='Example';public $mailonline=true;}"
+        (site/'configuration.php').write_text(original)
+        files.prepare_local(site,tools)
+        (site/'configuration.php').write_text('local configuration')
+        plugin=site/'wp-content/mu-plugins/vmm-local.php'
+        plugin.parent.mkdir(parents=True);plugin.write_text('local mail filter')
+        (site/'vmm-manager-login.php').write_text('manager login')
+        entries={name:path.read_text() for path,name in files.archive_entries(site,tools)}
+        self.assertEqual(entries['configuration.php'],original)
+        self.assertNotIn('configuration.php.vmm-original.php',entries)
+        self.assertNotIn('wp-content/mu-plugins/vmm-local.php',entries)
+        self.assertNotIn('vmm-manager-login.php',entries)
+        self.assertEqual((site/'configuration.php').read_text(),'local configuration')
+
+    def test_wordpress_original_config_and_existing_mu_plugin_are_restored(self):
+        site,tools=self.fixture()
+        config="<?php define('WP_HOME','https://example.org'); define('FORCE_SSL_ADMIN',true);"
+        (site/'wp-config.php').write_text(config)
+        plugin=site/'wp-content/mu-plugins/vmm-local.php'
+        plugin.parent.mkdir(parents=True);plugin.write_text('original plugin')
+        files.prepare_local(site,tools)
+        (site/'wp-config.php').write_text('local config')
+        plugin.write_text('manager override')
+        entries={name:path.read_text() for path,name in files.archive_entries(site,tools)}
+        self.assertEqual(entries['wp-config.php'],config)
+        self.assertEqual(entries['wp-content/mu-plugins/vmm-local.php'],'original plugin')
+        self.assertFalse(any('vmm-original' in name for name in entries))
+        self.assertEqual(plugin.read_text(),'manager override')
+        self.assertFalse((plugin.parent/'vmm-local.php.vmm-original.php').exists())
+
+    def test_missing_or_changed_original_never_falls_back_to_local_config(self):
+        for change in ('missing','modified'):
+            with self.subTest(change=change):
+                site,tools=self.fixture()
+                (site/'configuration.php').write_text('original config')
+                files.prepare_local(site,tools)
+                (site/'configuration.php').write_text('local config with mail disabled')
+                saved=site/'configuration.php.vmm-original.php'
+                if change=='missing':saved.unlink()
+                else:saved.write_text('changed original')
+                with self.assertRaisesRegex(ValueError,'Originaldatei fehlt oder wurde verändert'):
+                    list(files.archive_entries(site,tools))
+
+    def test_server_file_generated_only_locally_is_not_exported(self):
+        site,tools=self.fixture();files.prepare_local(site,tools)
+        (site/'.htaccess').write_text('local redirect')
+        self.assertNotIn('.htaccess',dict((name,path) for path,name in files.archive_entries(site,tools)))
+
+    def test_preservation_failure_removes_partial_copies(self):
+        site,tools=self.fixture();(site/'configuration.php').write_text('source config')
+        with patch.object(files.shutil,'copyfileobj',side_effect=OSError('copy failed')):
+            with self.assertRaises(OSError):files.prepare_local(site,tools)
+        self.assertEqual((site/'configuration.php').read_text(),'source config')
+        self.assertFalse((site/'configuration.php.vmm-original.php').exists())
+        self.assertFalse((tools/files.MANIFEST).exists())
+
     def test_template_is_left_untouched_without_previous_htaccess(self):
         site,tools=self.fixture();(site/'htaccess.txt').write_text('template')
         files.prepare_local(site,tools)

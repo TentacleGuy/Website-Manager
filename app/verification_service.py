@@ -138,7 +138,7 @@ def run(kind,ident,php=None,completed_backup=False):
         if kind=='backup':
             native=(site/'installation/src/Framework/Cli/InstallationQueue.php').is_file()
             if native:php_command(['php','installation/cli.php','config:make'],timeout=300)
-            output=php_command(['php','/vmm-tools/restore-backup.php'],input=json.dumps({'database':database_info,'url':'http://localhost'}).encode(),timeout=1800)
+            output=php_command(['php','/vmm-tools/restore-backup.php'],input=json.dumps({'database':database_info,'url':'http://localhost','cms':cms}).encode(),timeout=1800)
             if (b'VMM_CONFIGURED' if native else b'VMM_DATABASE_RESTORED') not in output:raise ValueError('Der Akeeba-Installer hat die Testdatenbank nicht bestätigt.')
             if native:
                 output=php_command(['php','installation/cli.php','execute'],timeout=1800)
@@ -146,6 +146,8 @@ def run(kind,ident,php=None,completed_backup=False):
         else:
             with (stage/'zip/database.sql').open('rb') as sql:
                 execute(['docker','exec','-i',database,'sh','-c','exec '+client+' -u"$'+prefix+'_USER" -p"$'+prefix+'_PASSWORD" "$'+prefix+'_DATABASE"'],stdin=sql,timeout=1800)
+        from project_files import restore_configuration
+        restore_configuration(site,cms)
         php_command(['php','/vmm-tools/verification-config.php'],input=json.dumps(database_info).encode(),timeout=120)
         for name in ('configuration.php','wp-config.php'):
             if (site/name).is_file():(site/name).chmod(0o666)

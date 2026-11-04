@@ -6,6 +6,21 @@ Alle wesentlichen Änderungen am Website Manager werden hier dokumentiert. Neue 
 
 Noch keine Änderungen.
 
+## [2.0.4] - 2026-11-04
+
+### Verbessert
+
+- Die Backup-Übersicht trennt hochgeladene Importvorlagen für neue Projekte, aus Projekten erstellte Akeeba-Backups für die Livesite und lokale Manager-Projektsicherungen. Projektansicht und Erstellungsdialog benennen den jeweiligen Verwendungszweck.
+
+- Startvideo jederzeit per Kreuz oder Escape schließbar. Die Wiedergabe startet ohne zusätzlichen Klick; blockiert der Browser Autoplay mit Ton, läuft das Video automatisch stumm. Unter dem Video bleibt nur die Checkbox „Beim nächsten Start abspielen“.
+
+### Behoben
+
+- WordPress-Importe behalten die ursprünglichen Datenbank-URLs und Inhalte; lokale URLs werden zur Laufzeit angewendet. Ursprüngliche WordPress-Konfigurationen und vorhandene Dateien an den Manager-Pluginpfaden werden für den Export erhalten. Neue lokale Lizenz- und Updateanbindungen speichern ihre Manager-Einstellungen außerhalb der Website statt in den exportierten WordPress-Optionen.
+
+- Vor dem Import werden ursprüngliche CMS-Konfigurationen und betroffene Serverdateien mit Prüfsummen gesichert. Nach der Akeeba-Installation werden ursprüngliche Einstellungen vor den lokalen DB- und Pfadanpassungen wieder übernommen. Projektbackups kombinieren aktuelle Inhalte und Datenbank mit diesen Originaldateien, einschließlich Sitename, Mailversand, SMTP- und ursprünglichen Datenbankzugängen; lokale Managerdateien bleiben draußen. Fehlende oder veränderte Originale verhindern einen unbemerkten Export lokaler Einstellungen. Die lokale Website bleibt beim Backup unverändert.
+- Abgeschlossene Akeeba-ZIP-Backups und ihre Archivteile werden beim Abgleich anhand ihres tatsächlichen Formats einschließlich des Akeeba-ZIP-Vorspanns „PK00“ erkannt, statt als ungültige JPA-Sicherung abgelehnt zu werden.
+
 ## [2.0.3] - 2026-11-03
 
 ### Behoben

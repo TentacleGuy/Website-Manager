@@ -197,11 +197,15 @@ Die lokale Startdatei des Managers richtet dafür beim nächsten Start die Deskt
 
 Der Browser kann beim ersten Öffnen nach einer Bestätigung fragen. Die Anbindung nimmt ausschließlich Projektnamen entgegen und ermittelt den vorhandenen Ordner über den lokalen Manager; sie akzeptiert keine beliebigen Pfade oder Befehle. Bei Zugriff von einem anderen Rechner wird nur der Pfad angezeigt. Ältere Projekte in Docker-Volumes müssen zuvor auf gemeinsame Laufzeiten umgestellt werden.
 
-### Lokale und ursprüngliche Server-Konfiguration
+### Lokale und ursprüngliche Website-Konfiguration
+
+Im Entwicklungsstand werden vor der Akeeba-Installation zusätzlich die ursprüngliche `configuration.php` beziehungsweise `wp-config.php` und bereits vorhandene Dateien an den Manager-Pluginpfaden gesichert. Prüfsummen schützen die Originale vor unbemerkter Veränderung. Nach der Installation übernimmt der Manager diese CMS-Einstellungen und ändert nur die lokal nötigen Werte; insbesondere werden Sitename und SMTP-Einstellungen nicht durch Installer-Standardwerte ersetzt. Der lokale Mailversand darf deaktiviert sein, während das spätere Archiv die ursprüngliche Einstellung enthält. Das Wiki beschreibt weiterhin die veröffentlichte Version.
 
 Beim Akeeba-Import erhält der Manager vorhandene `.htaccess`, `.user.ini` und `php.ini` als `.vmm-original`. War eine `.htaccess` vorhanden, wird die mitgelieferte `htaccess.txt` (alternativ `.htaccess.txt`) zur lokalen `.htaccess` umbenannt. Ohne vorherige `.htaccess` wird keine Vorlage aktiviert. Fehlt die Vorlage, bleibt das Original gesichert und wird nicht ungeprüft lokal aktiviert.
 
-Akeeba-Backups über den Manager ordnen diese Originaldateien direkt beim Schreiben des JPA-Archivs wieder den ursprünglichen Namen zu. Die lokale `.htaccess` erhält dabei ihren Vorlagennamen zurück; `.vmm-original`-Doppeldateien landen nicht im Archiv. Die laufende Website wird während des Backups nicht umbenannt oder auf Produktionsregeln umgestellt. Das gilt auch für vorhandene `.vmm-original`-Dateien aus älteren Importen. Unterordner bleiben unverändert. Ein Backup wird nur als vollständig angeboten, wenn Akeeba die erwarteten Serverdateien nachweislich aufgenommen hat; ausschließende Profilfilter führen zu einer verständlichen Fehlermeldung. Auch ZIP-Projektsicherungen verwenden diese ursprünglichen Dateinamen und erhalten die lokale htaccess-Vorlage unter ihrem Vorlagennamen.
+Akeeba-Backups über den Manager ordnen diese Originaldateien direkt beim Schreiben des JPA-Archivs wieder den ursprünglichen Namen zu. Die lokale `.htaccess` erhält dabei ihren Vorlagennamen zurück; `.vmm-original`-Doppeldateien landen nicht im Archiv. Die laufende Website wird während des Backups nicht umbenannt oder auf Produktionsregeln umgestellt. Das Archiv enthält außerdem die aktuelle Projektdatenbank und aktuelle Website-Inhalte; die gesicherte CMS-Konfiguration liefert die ursprünglichen DB-, Mail- und übrigen Einstellungen. Akeeba kann die Datenbankzugänge beim Installieren auf einem anderen Zielserver erneut anpassen. Fehlen gesicherte Originale aus einem älteren Import, lassen sie sich nicht zuverlässig aus den lokalen Werten rekonstruieren; dafür ist das ursprüngliche Importbackup nötig.
+
+Das gilt auch für vorhandene `.vmm-original`-Dateien aus älteren Importen. Unterordner bleiben unverändert. Ein Backup wird nur als vollständig angeboten, wenn Akeeba die erwarteten Serverdateien nachweislich aufgenommen hat; ausschließende Profilfilter führen zu einer verständlichen Fehlermeldung. Auch ZIP-Projektsicherungen verwenden diese ursprünglichen Dateinamen und erhalten die lokale htaccess-Vorlage unter ihrem Vorlagennamen.
 
 ## Arbeitsbereiche und gespeicherte Dateien
 
@@ -254,6 +258,6 @@ Pakete und Archive bleiben im Papierkorb als versteckte Dateien im jeweiligen Sp
 
 Beim Öffnen des Managers erscheint das Startvideo mit Ton in einem abgedunkelten Modal mit gerundeten Ecken. Die Wiedergabe ist standardmäßig aktiviert. Unter dem Video legt **Beim nächsten Start abspielen** fest, ob es beim nächsten Öffnen wieder erscheint. Dieselbe Auswahl steht unter **System → Startvideo** zur Verfügung; **Startvideo ansehen** öffnet die Vorschau auch bei deaktiviertem Startvideo. Die Auswahl wird für den jeweiligen Browser gespeichert.
 
-Das Video hat keine Bedienelemente. Erst nach dem Ende lässt sich das Fenster über das Kreuz oben rechts oder Escape schließen. Blockiert der Browser Autoplay mit Ton, startet ein Klick auf **Video mit Ton starten** die Wiedergabe. Bei einem Lade- oder Wiedergabefehler wird das Schließen freigegeben.
+Im aktuellen Entwicklungsstand startet das Video automatisch und lässt sich jederzeit über das Kreuz oben rechts oder Escape schließen. Blockiert der Browser Autoplay mit Ton, startet es automatisch stumm. Unter dem Video bleibt nur die Checkbox mit ihrem Text. Das Wiki beschreibt weiterhin die veröffentlichte Version.
 
 Verfügbar ab Version 2.0.1. In der Projektliste öffnet das Papierkorb-Icon den bestehenden Dialog zur Projektlöschung; der Projektname muss bestätigt werden.

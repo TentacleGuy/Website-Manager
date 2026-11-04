@@ -66,16 +66,23 @@ if (!function_exists('get_option')) {
 // WordPress is already bootstrapped by wp eval-file.
 $data=json_decode(stream_get_contents(STDIN),true,512,JSON_THROW_ON_ERROR);$s=$data['source'];$cred=$data['credentials'];
 if (empty($s['element'])) throw new RuntimeException('WordPress-Slug in der Erweiterungsquelle ergänzen.');
+$settingsFile=__DIR__.'/wordpress-local-options.json';
+$localOptions=is_file($settingsFile)?json_decode(file_get_contents($settingsFile),true):[];
+if (!is_array($localOptions)) throw new RuntimeException('Lokale WordPress-Einstellungen sind ungültig.');
 foreach (($s['cms_config']['wordpress_options'] ?? []) as $name=>$fields) {
-    if (is_string($fields)) update_option($name,$cred[$fields] ?? ($cred['extra'][$fields] ?? ''),false);
+    if (is_string($fields)) $localOptions[$name]=$cred[$fields] ?? ($cred['extra'][$fields] ?? '');
     else {
-        $value=get_option($name,[]);if (!is_array($value)) $value=[];
+        $value=$localOptions[$name] ?? get_option($name,[]);if (!is_array($value)) $value=[];
         foreach ($fields as $key=>$field) $value[$key]=$cred[$field] ?? ($cred['extra'][$field] ?? '');
-        update_option($name,$value,false);
+        $localOptions[$name]=$value;
     }
 }
-$all=get_option('vmm_extension_sources',[]);$all[$s['id']]=$data;update_option('vmm_extension_sources',$all,false);
+$all=$localOptions['vmm_extension_sources'] ?? []; $all[$s['id']]=$data;$localOptions['vmm_extension_sources']=$all;
+if (file_put_contents($settingsFile,json_encode($localOptions),LOCK_EX)===false) throw new RuntimeException('Lokale WordPress-Einstellungen konnten nicht gesichert werden.');
+chmod($settingsFile,0600);
 $dir=WPMU_PLUGIN_DIR;if (!is_dir($dir)) wp_mkdir_p($dir);
-if (!copy(__DIR__.'/wordpress-extension-updates.php',$dir.'/vmm-extension-updates.php')) throw new RuntimeException('WordPress-Updateanbindung konnte nicht geschrieben werden.');
+$plugin=file_get_contents(__DIR__.'/wordpress-extension-updates.php');
+$plugin=str_replace('__VMM_LOCAL_OPTIONS_FILE__',var_export($settingsFile,true),$plugin);
+if (file_put_contents($dir.'/vmm-extension-updates.php',$plugin)===false) throw new RuntimeException('WordPress-Updateanbindung konnte nicht geschrieben werden.');
 delete_site_transient('update_plugins');delete_site_transient('update_themes');
 echo 'Lizenz und native WordPress-Updateanbindung hinterlegt.';
