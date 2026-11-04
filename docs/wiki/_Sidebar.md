@@ -1,4 +1,4 @@
-**Website Manager 2.0.3**
+**Website Manager 2.0.4**
 
 - [Startseite](Home.md)
 - [Voraussetzungen](Voraussetzungen.md)
@@ -21,7 +21,7 @@
 
 - [Startvideo](Startvideo.md)
 
-- [Backups und Wiederherstellung](Backups-und-Wiederherstellung.md)
+- [Importvorlagen und Backups](Backups-und-Wiederherstellung.md)
 - [Dateimanager und Papierkorb](Dateimanager-und-Papierkorb.md)
 - [Speicherorte und Umzug](Speicherorte-und-Umzug.md)
 - [Aufgaben und Aktivitäten](Aufgaben-und-Aktivitaeten.md)

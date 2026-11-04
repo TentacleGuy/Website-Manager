@@ -4,9 +4,9 @@ Beim Öffnen des Projektmanagers erscheint standardmäßig ein Startvideo mit To
 
 ## Wiedergabe und Schließen
 
-Das Video startet automatisch mit Ton, sofern der Browser dies erlaubt. Falls der Browser Autoplay mit Ton blockiert, **Video mit Ton starten** anklicken. Bei einer unterbrochenen Wiedergabe kann die Fortsetzen-Schaltfläche verwendet werden.
+Das Video startet automatisch mit Ton, sofern der Browser dies erlaubt. Blockiert der Browser Autoplay mit Ton, wird es automatisch stumm abgespielt. Ein zusätzlicher Startknopf ist nicht erforderlich.
 
-Erst nach Ende des Videos wird das Kreuz oben rechts freigegeben. Dann lässt sich das Fenster auch mit Escape schließen. Vorher bleiben beide Wege gesperrt. Falls das Video nicht geladen oder abgespielt werden kann, wird das Schließen freigegeben, damit der Manager erreichbar bleibt.
+Das Fenster lässt sich jederzeit über das Kreuz oben rechts oder mit Escape schließen, auch während der Wiedergabe. Unter dem Video steht nur die Checkbox **Beim nächsten Start abspielen**.
 
 ## Beim nächsten Start abspielen
 

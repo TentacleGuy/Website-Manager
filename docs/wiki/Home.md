@@ -4,7 +4,7 @@ Der Website Manager verwaltet lokale Joomla- und WordPress-Websites: Projekte er
 
 ## Aktuelle Version
 
-Diese Anleitungen gelten für die veröffentlichte Version **2.0.3**. Grundlage ist der [Release-Tag v2.0.3](https://github.com/TentacleGuy/Website-Manager/tree/v2.0.3). Das Wiki wird mit einer neuen Veröffentlichung auf deren Stand gebracht. Geplante Weiterentwicklungen stehen separat in der [Roadmap](Roadmap.md).
+Diese Anleitungen gelten für die veröffentlichte Version **2.0.4**. Grundlage ist der [Release-Tag v2.0.4](https://github.com/TentacleGuy/Website-Manager/tree/v2.0.4). Das Wiki wird mit einer neuen Veröffentlichung auf deren Stand gebracht. Geplante Weiterentwicklungen stehen separat in der [Roadmap](Roadmap.md).
 
 ## Erste Schritte
 
@@ -12,7 +12,7 @@ Diese Anleitungen gelten für die veröffentlichte Version **2.0.3**. Grundlage 
 2. Die Anleitung für [Windows](Installation-Windows.md), [macOS](Installation-macOS.md) oder [Linux](Installation-Linux.md) verwenden.
 3. [Ein Projekt erstellen](Projekte.md) oder [ein Akeeba-Backup importieren](Akeeba-Import.md).
 
-Die Installationspakete stehen im [Release v2.0.3](https://github.com/TentacleGuy/Website-Manager/releases/tag/v2.0.3). Das Dashboard öffnet sich unter **http://localhost:8090/** auf dem Installationsrechner.
+Die Installationspakete stehen im [Release v2.0.4](https://github.com/TentacleGuy/Website-Manager/releases/tag/v2.0.4). Das Dashboard öffnet sich unter **http://localhost:8090/** auf dem Installationsrechner.
 
 ## Anleitungen
 
@@ -23,7 +23,7 @@ Die Installationspakete stehen im [Release v2.0.3](https://github.com/TentacleGu
 | PHP und Datenbank auswählen | [Laufzeiten und Datenbanken](Laufzeiten-und-Datenbanken.md) |
 | Plugins, Themes und Joomla-Erweiterungen verwalten | [Erweiterungen und Lizenzen](Erweiterungen-und-Lizenzen.md) |
 | CMS-Benutzer und Backend-Login verwalten | [Benutzer und Zugangsdaten](Benutzer-und-Zugangsdaten.md) |
-| Website sichern oder als neues Projekt wiederherstellen | [Backups und Wiederherstellung](Backups-und-Wiederherstellung.md) |
+| Importvorlagen, Livesite-Backups und lokale Sicherungen verwalten | [Backups und Wiederherstellung](Backups-und-Wiederherstellung.md) |
 | Pakete aufräumen oder aus dem Papierkorb zurückholen | [Dateimanager und Papierkorb](Dateimanager-und-Papierkorb.md) |
 | Dateien auf einen anderen Datenträger verschieben | [Speicherorte und Umzug](Speicherorte-und-Umzug.md) |
 | Prüfungen und Sicherungen planen | [Aufgaben und Aktivitäten](Aufgaben-und-Aktivitaeten.md) |

@@ -1,11 +1,14 @@
 # Backups und Wiederherstellung
 
-Der Manager unterscheidet native Akeeba-Archive und eigene ZIP-Projektsicherungen. Beide können Dateien und Datenbank enthalten, verwenden aber unterschiedliche Wiederherstellungswege.
+Unter **Backups** sind drei Verwendungszwecke getrennt:
 
-| Sicherung | Erstellen | Wiederherstellen |
+| Bereich | Inhalt und Herkunft | Verwendung |
 | --- | --- | --- |
-| Akeeba-Archiv | Native Akeeba-CLI im Projekt | [Akeeba-Import](Akeeba-Import.md) mit Hauptarchiv und allen Teilen |
-| Manager-Projektsicherung | Datei-/SQL-Export des Managers | Gespeicherte Sicherung als neues Projekt einspielen |
+| Importvorlagen für Projekte | Hochgeladene Akeeba-Archive mit allen Teilen | Daraus ein neues lokales Projekt erstellen |
+| Backups für die Livesite | Im Manager aus Projekten erstellte Akeeba-Archive | Herunterladen und mit Akeeba auf dem Zielserver wiederherstellen |
+| Lokale Projektsicherungen | Manager-ZIPs mit Website-Dateien und SQL-Export | Als neues lokales Projekt wiederherstellen |
+
+Die Herkunft wird anhand der gespeicherten Backup-Metadaten unterschieden. Ein ZIP-Dateiname allein sagt nicht aus, ob es ein Akeeba-Archiv oder eine Manager-Projektsicherung ist.
 
 ## Projektsicherung erstellen
 
@@ -24,11 +27,11 @@ Der Manager legt ein neues Projekt mit eigener Projektdatenbank an. Ein bestehen
 
 ## Akeeba-Sicherung erstellen
 
-Im Projekt **Akeeba Backup erstellen** wählen, ein vorhandenes Akeeba-Profil auswählen und starten. Akeeba muss bereits in der Website installiert und seine unterstützte CLI verfügbar sein. Joomla benötigt die passende Konsolenanbindung, WordPress eine unterstützte CLI von Akeeba Backup Professional.
+Im Projekt **Livesite-Backup erstellen** wählen, ein vorhandenes Akeeba-Profil auswählen und starten. Akeeba muss bereits in der Website installiert und seine unterstützte CLI verfügbar sein. Joomla benötigt die passende Konsolenanbindung, WordPress eine unterstützte CLI von Akeeba Backup Professional.
 
 Der Manager übersteuert die Ausgabe für diesen Lauf auf ein lokales JPA-Archiv ohne Cloud-Nachbearbeitung, Löschquoten oder Abschluss-E-Mails. Gespeicherte Profile bleiben unverändert; ihre Filter wirken weiterhin. Erst nach Abschluss und Prüfung der Archivteile wird der Download freigegeben.
 
-Von Akeeba erfolgreich abgeschlossene Archive mit vorhandenen, geprüften Archivteilen stehen zum Download bereit. Ist nur der Nachweis der ursprünglichen Serverdateien unvollständig, erscheint **Serverdateien ungeprüft** mit einer Erläuterung. Das bedeutet nicht, dass Akeeba das Archiv als defekt gemeldet hat. Es ist aber keine vom Manager bestätigte Produktionssicherung und wird nicht als geprüfte Wiederherstellungsquelle angeboten.
+Von Akeeba erfolgreich abgeschlossene Archive mit vorhandenen, geprüften Archivteilen stehen zum Download bereit. Ist der Nachweis ursprünglicher Server- oder CMS-Konfigurationen unvollständig, erscheint **Serverdateien ungeprüft** mit einer Erläuterung. Das bedeutet nicht, dass Akeeba das Archiv als defekt gemeldet hat. Es ist aber keine vom Manager bestätigte Produktionssicherung und wird nicht als geprüfte Wiederherstellungsquelle angeboten.
 
 ### Vorhandenes Backend-Archiv übernehmen
 
@@ -36,13 +39,21 @@ Wenn Akeeba im CMS-Backend ein erfolgreiches Backup zeigt, im Manager aber noch 
 
 1. Das Projekt starten und **Projekt → Backups → Vorhandene Backups abgleichen** wählen.
 2. Den Abschluss im **Activity Log** abwarten.
-3. **Neuestes Akeeba Backup herunterladen** oder den Download beim Archiveintrag verwenden.
+3. **Neuestes Livesite-Backup herunterladen** oder den Download beim Archiveintrag verwenden.
 
-Der Abgleich sucht die vom Manager gestarteten, bisher fehlgeschlagenen Versuche anhand ihrer Kennung und ihres Profils in Akeebas Datenbank. Er übernimmt ausschließlich abgeschlossene vollständige Website-Backups aus den freigegebenen Projekt- oder Backupordnern. Alle gemeldeten Teile müssen vorhanden sein; bei geteilten JPA-Archiven wird der Dateikopf im ersten Teil geprüft. Die Übernahme kopiert die Archive mit Prüfsummenvergleich und lässt die Originale im CMS unverändert. Sie benötigt entsprechend freien Speicherplatz. Beliebige ältere, direkt im CMS gestartete Backups werden damit nicht importiert.
+Der Abgleich sucht die vom Manager gestarteten, bisher fehlgeschlagenen Versuche anhand ihrer Kennung und ihres Profils in Akeebas Datenbank. Er übernimmt ausschließlich abgeschlossene vollständige Website-Backups aus den freigegebenen Projekt- oder Backupordnern. Alle gemeldeten Teile müssen vorhanden sein; JPA- und ZIP-Archive werden anhand ihres Formats geprüft, bei geteilten Archiven im ersten Teil. Die Übernahme kopiert die Archive mit Prüfsummenvergleich und lässt die Originale im CMS unverändert. Sie benötigt entsprechend freien Speicherplatz. Beliebige ältere, direkt im CMS gestartete Backups werden damit nicht importiert.
 
-Der Abgleich bestätigt keinen zuvor fehlenden Nachweis der ursprünglichen Serverdateien. Solche übernommenen Archive bleiben entsprechend als ungeprüft gekennzeichnet. Fehlende Dateien oder ein von Akeeba nicht bestätigter Abschluss bleiben echte Fehler; Details stehen im Backup-Eintrag und im Activity Log.
+Der Abgleich bestätigt keinen zuvor fehlenden Nachweis ursprünglicher Server- oder CMS-Dateien. Solche übernommenen Archive bleiben entsprechend als ungeprüft gekennzeichnet. Fehlende Dateien oder ein von Akeeba nicht bestätigter Abschluss bleiben echte Fehler; Details stehen im Backup-Eintrag und im Activity Log.
 
-**Akeeba Backup herunterladen** lädt die neueste vollständige Sicherung. Bei mehreren Teilen wird ein äußeres Download-ZIP verwendet. Dieses zuerst entpacken und beim Import Hauptarchiv und alle Teile zusammen verwenden.
+**Livesite-Backup herunterladen** lädt die neueste vollständige Sicherung. Bei mehreren Teilen wird ein äußeres Download-ZIP verwendet. Dieses zuerst entpacken und beim Import Hauptarchiv und alle Teile zusammen verwenden.
+
+## Welche Einstellungen im Backup stehen
+
+Bei importierten Projekten verwendet der Manager die vor dem ersten lokalen Eingriff gesicherten CMS- und Serverdateien. Im Archiv heißen sie wieder `configuration.php`, `wp-config.php`, `.htaccess` und gegebenenfalls `.user.ini` beziehungsweise `php.ini`. Die lokalen Varianten werden beim Schreiben des Archivs ersetzt; die laufende Website bleibt unverändert. Bekannte Manager-Login- und WordPress-Plugins werden weggelassen oder durch vorhandene gesicherte Originaldateien ersetzt.
+
+Das Backup kombiniert die aktuellen Website-Inhalte und die aktuelle lokale Projektdatenbank mit den ursprünglichen Dateieinstellungen. Dazu gehören Sitename, Mailversand, SMTP-Zugänge und die ursprünglichen Datenbankzugänge. Beim Installieren auf einem anderen Server kann Akeeba die Datenbankzugänge und Zielpfade erneut anpassen. Ein deaktivierter lokaler Mailversand wird dadurch nicht als neue Produktionseinstellung übernommen.
+
+Fehlen durch Prüfsummen erfasste Originaldateien oder wurden sie verändert, bricht der Export ab. Die Originale deshalb nicht löschen oder bearbeiten. Für ältere Importe ohne gesicherte CMS-Konfiguration ist die ursprüngliche Importvorlage nötig; ein Manager-Update allein rekonstruiert diese Einstellungen nicht. Wird bei einer solchen Akeeba-Sicherung der Nachweis nicht erbracht, bleibt sie als ungeprüft gekennzeichnet.
 
 ## Wiederherstellungsprüfung
 

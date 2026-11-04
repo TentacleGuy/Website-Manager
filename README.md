@@ -4,7 +4,7 @@ Lokaler Projektmanager für Joomla und WordPress mit gemeinsamen Docker-Laufzeit
 
 ## Dokumentation
 
-Das [GitHub-Wiki](https://github.com/TentacleGuy/Website-Manager/wiki) enthält nach Aufgaben geordnete Anleitungen. Die gepflegten Quellen liegen unter [docs/wiki/Home.md](docs/wiki/Home.md). Das Wiki dokumentiert ausschließlich die aktuell veröffentlichte Version **2.0.1**, geprüft gegen den Release-Tag `v2.0.1`. Geplante Themen stehen separat in der [Roadmap](docs/wiki/Roadmap.md). Diese README beschreibt dagegen den Entwicklungszweig und kann bereits unveröffentlichte Funktionen enthalten. Der [Dokumentationsabgleich](docs/WIKI-PRUEFUNG.md) erläutert diese Abgrenzung.
+Das [GitHub-Wiki](https://github.com/TentacleGuy/Website-Manager/wiki) enthält nach Aufgaben geordnete Anleitungen. Die gepflegten Quellen liegen unter [docs/wiki/Home.md](docs/wiki/Home.md). Das Wiki dokumentiert ausschließlich die aktuell veröffentlichte Version **2.0.4**, geprüft gegen den Release-Tag `v2.0.4`. Geplante Themen stehen separat in der [Roadmap](docs/wiki/Roadmap.md). Diese README beschreibt dagegen den Entwicklungszweig und kann bereits unveröffentlichte Funktionen enthalten. Der [Dokumentationsabgleich](docs/WIKI-PRUEFUNG.md) erläutert diese Abgrenzung.
 
 ## Änderungsprotokoll
 
@@ -199,7 +199,7 @@ Der Browser kann beim ersten Öffnen nach einer Bestätigung fragen. Die Anbindu
 
 ### Lokale und ursprüngliche Website-Konfiguration
 
-Im Entwicklungsstand werden vor der Akeeba-Installation zusätzlich die ursprüngliche `configuration.php` beziehungsweise `wp-config.php` und bereits vorhandene Dateien an den Manager-Pluginpfaden gesichert. Prüfsummen schützen die Originale vor unbemerkter Veränderung. Nach der Installation übernimmt der Manager diese CMS-Einstellungen und ändert nur die lokal nötigen Werte; insbesondere werden Sitename und SMTP-Einstellungen nicht durch Installer-Standardwerte ersetzt. Der lokale Mailversand darf deaktiviert sein, während das spätere Archiv die ursprüngliche Einstellung enthält. Das Wiki beschreibt weiterhin die veröffentlichte Version.
+Ab Version 2.0.4 werden vor der Akeeba-Installation zusätzlich die ursprüngliche `configuration.php` beziehungsweise `wp-config.php` und bereits vorhandene Dateien an den Manager-Pluginpfaden gesichert. Prüfsummen schützen die Originale vor unbemerkter Veränderung. Nach der Installation übernimmt der Manager diese CMS-Einstellungen und ändert nur die lokal nötigen Werte; insbesondere werden Sitename und SMTP-Einstellungen nicht durch Installer-Standardwerte ersetzt. Der lokale Mailversand darf deaktiviert sein, während das spätere Archiv die ursprüngliche Einstellung enthält. Das Wiki beschreibt weiterhin die veröffentlichte Version.
 
 Beim Akeeba-Import erhält der Manager vorhandene `.htaccess`, `.user.ini` und `php.ini` als `.vmm-original`. War eine `.htaccess` vorhanden, wird die mitgelieferte `htaccess.txt` (alternativ `.htaccess.txt`) zur lokalen `.htaccess` umbenannt. Ohne vorherige `.htaccess` wird keine Vorlage aktiviert. Fehlt die Vorlage, bleibt das Original gesichert und wird nicht ungeprüft lokal aktiviert.
 

@@ -1,6 +1,6 @@
 # Wiki-Stand und Dokumentationspflege
 
-Das Benutzerhandbuch unter `docs/wiki/` und das GitHub-Wiki beschreiben ausschließlich die veröffentlichte Version **2.0.1**. GitHub führt sie als neuestes stabiles Release. Grundlage ist der Release-Tag `v2.0.1` auf Commit `fe969a40384c74cef097929e77e26c8a71e62c04`. Geprüft am 2. November 2026 nach der Veröffentlichung.
+Das Benutzerhandbuch unter `docs/wiki/` und das GitHub-Wiki beschreiben ausschließlich die veröffentlichte Version **2.0.4**. GitHub führt sie als neuestes stabiles Release. Grundlage ist der Release-Tag `v2.0.4` auf Commit `6f26630e652ffad2abb379116d18d04d996373b4`. Geprüft am 4. November 2026 nach der Veröffentlichung.
 
 ## Abgleich mit dem Release
 
@@ -15,7 +15,9 @@ Die zuvor auf der Roadmap stehenden Themen sind bereits mit 2.0.0 veröffentlich
 
 ## Prüfungen zur Veröffentlichung
 
-230 lokale Unit-Tests, JavaScript-/PHP-Syntaxprüfungen, Paketbau, Prüfsummen und der lokale Installations-/Updatepaket-Test waren erfolgreich. Die GitHub-Workflows für Release und Plattformprüfungen liefen für das Veröffentlichungstag erfolgreich. Eine echte Aktualisierung auf dem Rechner einer Kollegin ist damit nicht bestätigt.
+Der vollständige Testlauf in einer temporären Linux-Testumgebung umfasste 254 Tests und war erfolgreich; 9 Tests wurden mangels Plattformwerkzeugen übersprungen. Die PHP-gestützten Ablauf- und Dateitests wurden zusätzlich lokal ausgeführt. JavaScript-/PHP-Syntax, Paketbau, Paketversionen, ZIP-Inhalte und SHA-256-Prüfsummen wurden geprüft. Der GitHub-Release-Workflow und die Plattformprüfungen für Windows, macOS und Linux für `v2.0.4` waren erfolgreich; die veröffentlichten Update- und Installationspakete sowie ihre Prüfsummen sind vorhanden.
+
+Eine echte Wiederherstellung auf einem externen Zielserver und eine Aktualisierung auf einem anderen Rechner sind damit nicht bestätigt.
 
 ## Pflege bei weiteren Releases
 
@@ -33,6 +35,6 @@ Die Quellen beginnen bei [wiki/Home.md](wiki/Home.md). `_Sidebar.md` und `_Foote
 
 Wiki-Repository: `https://github.com/TentacleGuy/Website-Manager.wiki.git`. Inhaltliche Änderungen ausschließlich aus den gepflegten Quellen übertragen.
 
-## Ergänzungen in 2.0.1
+## Umfang des aktuellen Abgleichs
 
-Startvideo und Systemeinstellung gegen `app/static/splash.js` und `splash.css` geprüft. Die Medienauslieferung einschließlich Byte-Range-Anfragen ist durch Tests abgedeckt. Das Papierkorb-Icon in der Projektliste verwendet die bestehende Bestätigung; in einer getrennten Vorschau wurden der Dialog und die Sperre bei laufenden Vorgängen geprüft. Die öffentlichen Updatepakete werden mit den Updateprüfern aus 1.2.3 und 2.0.0 geprüft.
+Importablauf, Originaldateien, Archiv-Zuordnung und Prüfstatus gegen `app/backup_service.py`, `project_files.py`, `akeeba_service.py` und die PHP-Helfer des Release-Tags geprüft. Backup-Übersicht, Projektaktionen und Startvideo gegen die endgültigen Renderer geprüft. Startseite, Navigation, Fußzeile und Versionsverweise wurden auf das veröffentlichte Release angeglichen. Die Roadmap enthält keine offenen Zusagen zu den veröffentlichten Änderungen. Versionshinweise bleiben ausschließlich im Changelog.
