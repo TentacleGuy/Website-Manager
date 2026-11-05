@@ -109,14 +109,16 @@ class AkeebaCreationTests(unittest.TestCase):
     def test_native_creation_requires_completed_status_and_preserves_multipart(self):
         name=self.setup_project();ident=secrets.token_hex(12)
         def execute(p,args,**kwargs):
+            if 'vmm:akeeba-options' in args:return json.dumps({'definition':{'options':{'overrides':{'is_multiple':False,'accept_value':True}}}}).encode()
             stage=akeeba.DATA/'backups'/ident;base='vmm-'+name+'-'+ident
             if 'akeeba:backup:take' in args:
                 self.assertIn('allowed_returncodes',kwargs)
                 overrides=[x for x in args if x.startswith('--overrides=')]
-                self.assertIn('--overrides=akeeba.advanced.postproc_engine=none',overrides)
-                self.assertIn('--overrides=akeeba.quota.enable_count_quota=0',overrides)
-                self.assertIn('--overrides=akeeba.basic.output_directory=/vmm-backups/'+ident,overrides)
-                self.assertTrue(all(',' not in value for value in overrides))
+                self.assertEqual(len(overrides),1)
+                settings=dict(value.split('=',1) for value in overrides[0][len('--overrides='):].split(','))
+                self.assertEqual(settings['akeeba.advanced.postproc_engine'],'none')
+                self.assertEqual(settings['akeeba.quota.enable_count_quota'],'0')
+                self.assertEqual(settings['akeeba.basic.output_directory'],'/vmm-backups/'+ident)
                 (stage/(base+'.jpa')).write_bytes(b'last-part');(stage/(base+'.j01')).write_bytes(b'JPA-test-native-archive')
                 return b'Backup complete'
             return json.dumps([{'id':42,'description':'VMM-'+ident,'status':'complete','multipart':2}]).encode()
@@ -133,6 +135,7 @@ class AkeebaCreationTests(unittest.TestCase):
         (site/'.htaccess').write_text('production');(site/'htaccess.txt').write_text('local')
         tools=site.parent/'tools';prepare_local(site,tools)
         def execute(p,args,**kwargs):
+            if 'vmm:akeeba-options' in args:return json.dumps({'definition':{'options':{'overrides':{'is_multiple':False,'accept_value':True}}}}).encode()
             if 'akeeba:backup:take' in args:
                 (akeeba.DATA/'backups'/ident/('vmm-'+name+'-'+ident+'.jpa')).write_bytes(b'JPA-fixture')
                 return b'done'
@@ -153,11 +156,13 @@ class AkeebaCreationTests(unittest.TestCase):
         (site/'.htaccess').write_text('production');(site/'htaccess.txt').write_text('local')
         tools=site.parent/'tools';prepare_local(site,tools)
         def execute(p,args,**kwargs):
+            if 'vmm:akeeba-options' in args:return json.dumps({'definition':{'options':{'overrides':{'is_multiple':False,'accept_value':True}}}}).encode()
             if 'akeeba:backup:take' in args:
                 self.assertEqual((site/'.htaccess').read_text(),'local')
-                # Model the CLI's repeated key=value options, rather than just
-                # searching the command string for the desired settings.
-                options=dict(arg[len('--overrides='):].split('=',1) for arg in args if arg.startswith('--overrides='))
+                # A scalar Symfony option takes one comma-separated value.
+                values=[arg[len('--overrides='):] for arg in args if arg.startswith('--overrides=')]
+                self.assertEqual(len(values),1)
+                options=dict(value.split('=',1) for value in values[0].split(','))
                 self.assertEqual(options['akeeba.advanced.archiver_engine'],'vmmjpa')
                 self.assertEqual(options['akeeba.basic.output_directory'],'/vmm-backups/'+ident)
                 self.assertEqual(options['akeeba.basic.archive_name'],'vmm-'+name+'-'+ident)
@@ -197,6 +202,7 @@ class AkeebaCreationTests(unittest.TestCase):
         self.assertEqual(akeeba.capability(project(name))['driver'],'joomla-legacy')
         self.assertTrue(akeeba.capability(project(name))['available'])
         def execute(p,args,**kwargs):
+            if 'vmm:akeeba-options' in args:return json.dumps({'definition':{'options':{'overrides':{'is_multiple':False,'accept_value':True}}}}).encode()
             if 'cli/akeeba-backup.php' in args:
                 self.assertIn('--override=akeeba.advanced.archiver_engine=jpa',args)
                 self.assertFalse(any(x.startswith('--overrides=') for x in args))
@@ -306,6 +312,7 @@ class AkeebaCreationRecoveryTests(unittest.TestCase):
             ident='b'*24
             record={'id':3,'description':'VMM-'+ident,'status':'complete','type':'full','archivename':'backend.jpa','absolute_path':'/vmm-projects/demo/site/administrator/backups/backend.jpa','multipart':1}
             def execute(p,args,**kwargs):
+                if 'vmm:akeeba-options' in args:return json.dumps({'definition':{'options':{'overrides':{'is_multiple':False,'accept_value':True}}}}).encode()
                 if 'akeeba:backup:take' in args:
                     (native/'backend.jpa').write_bytes(b'JPA-native-backup')
                     return b'Backup successful'
@@ -330,3 +337,19 @@ class ArchiveFormatTests(unittest.TestCase):
             akeeba.validate_archives(root,['backup.zip','backup.z01'])
             (root/'backup.z01').write_bytes(b'broken')
             with self.assertRaisesRegex(ValueError,'ZIP'):akeeba.validate_archives(root,['backup.zip','backup.z01'])
+
+
+class JoomlaOverrideDefinitionTests(unittest.TestCase):
+    def test_installed_option_definition_selects_scalar_or_array_protocol(self):
+        settings={'akeeba.basic.output_directory':'/vmm-backups/test','akeeba.advanced.archiver_engine':'vmmzip'}
+        for multiple in (False,True):
+            with self.subTest(multiple=multiple):
+                descriptor={'definition':{'options':{'overrides':{'accept_value':True,'is_multiple':multiple}}}}
+                raw=('CMS notice before JSON\n'+json.dumps(descriptor)).encode()
+                with patch('operations.exec_php',return_value=raw):params=akeeba.joomla_overrides({},settings)
+                if multiple:self.assertEqual(len(params),2)
+                else:self.assertEqual(params,['--overrides=akeeba.basic.output_directory=/vmm-backups/test,akeeba.advanced.archiver_engine=vmmzip'])
+
+    def test_unknown_cli_definition_fails_before_backup(self):
+        with patch('operations.exec_php',return_value=b'{}'):
+            with self.assertRaisesRegex(ValueError,'keine Sicherung gestartet'):akeeba.joomla_overrides({}, {'key':'value'})

@@ -133,6 +133,27 @@ def reconcile(name):
     return str(recovered)+' vorhandene Akeeba-Sicherung(en) übernommen.'+(' Weitere Versuche konnten nicht übernommen werden; Details im Backup-Eintrag.' if errors else '')
 
 
+def joomla_overrides(p,overrides):
+    """Use the installed command's option definition, not a Joomla-version guess."""
+    import operations as op
+    raw=op.exec_php(p,['php','/vmm-tools/akeeba-cli-options.php','vmm:akeeba-options'],timeout=120).decode(errors='replace')
+    definition=None
+    for index,char in enumerate(raw):
+        if char!='{':continue
+        try:value,_=json.JSONDecoder().raw_decode(raw[index:])
+        except ValueError:continue
+        if isinstance(value,dict) and isinstance(value.get('definition'),dict):
+            definition=value['definition'];break
+    option=(definition or {}).get('options',{}).get('overrides',{})
+    multiple=option.get('is_multiple')
+    if not isinstance(multiple,bool) or not option.get('accept_value'):
+        raise ValueError('Akeebas CLI-Format für Backup-Einstellungen konnte nicht ermittelt werden. Es wurde keine Sicherung gestartet.')
+    values=[key+'='+value for key,value in overrides.items()]
+    if multiple:return ['--overrides='+value for value in values]
+    if any(',' in value for value in values):raise ValueError('Akeebas CLI unterstützt keine Kommas in Backup-Einstellungen.')
+    return ['--overrides='+','.join(values)]
+
+
 def create(name,profile=1,verify=False):
     import operations as op
     p=project(name);available=capability(p)
@@ -157,13 +178,13 @@ def create(name,profile=1,verify=False):
         shutil.copyfile(Path(__file__).parent/'tools/akeeba-local.php',tools/'akeeba-local.php')
         output='/vmm-backups/'+ident
         overrides={'akeeba.basic.output_directory':output,'akeeba.basic.archive_name':filename,'akeeba.basic.backup_type':'full','akeeba.advanced.archiver_engine':'vmmjpa' if mapping else 'jpa','akeeba.advanced.postproc_engine':'none','akeeba.quota.enable_count_quota':'0','akeeba.quota.enable_size_quota':'0','akeeba.quota.maxage.enable':'0','akeeba.quota.remotely.enable_count_quota':'0','akeeba.quota.remotely.enable_size_quota':'0','akeeba.quota.remotely.maxage.enable':'0','akeeba.quota.obsolete_quota':'0','akeeba.quota.enable_logfiles':'0'}
-        # Joomla's array option needs one occurrence per setting. WP-CLI
-        # associative options use one value, so retain its comma-separated form.
-        params=(['--overrides='+k+'='+v for k,v in overrides.items()] if p['cms']=='joomla'
+        # Installed Akeeba versions differ: a scalar option silently keeps only
+        # the final repeated value, losing original-file and output overrides.
+        legacy=available.get('driver')=='joomla-legacy'
+        params=(joomla_overrides(p,overrides) if p['cms']=='joomla' and not legacy
                 else ['--overrides='+','.join(k+'='+v for k,v in overrides.items())])
         if p['cms']=='joomla':base=['php','-d','auto_prepend_file=/vmm-tools/akeeba-local.php','cli/joomla.php'];take=['akeeba:backup:take'];query=['akeeba:backup:list']
         else:base=['php','-d','auto_prepend_file=/vmm-tools/akeeba-local.php','/usr/local/bin/wp','--allow-root'];take=['akeeba','backup','take'];query=['akeeba','backup','list']
-        legacy=available.get('driver')=='joomla-legacy'
         if legacy:
             shutil.copyfile(Path(__file__).parent/'tools/akeeba-legacy-status.php',tools/'akeeba-legacy-status.php')
             take_command=['php','-d','auto_prepend_file=/vmm-tools/akeeba-local.php','cli/akeeba-backup.php','--profile='+str(profile),'--description='+description]+['--override='+k+'='+v for k,v in overrides.items()]

@@ -73,7 +73,7 @@ if (PHP_SAPI !== 'cli') {
   }
 }
 ''')
-    for name in ('joomla-updates.php','extension-bridge.php','wordpress-extension-updates.php','cms-users.php','restore-backup.php','library-project.php'):
+    for name in ('akeeba-cli-options.php','joomla-updates.php','extension-bridge.php','wordpress-extension-updates.php','cms-users.php','restore-backup.php','library-project.php'):
         shutil.copyfile(Path(__file__).parent/'tools'/name,tools/name)
     from shared_runtime import database_info
     info=database_info(p) if p.get('storage')=='shared' else {'host':'db','database':'website','user':'website','password':p['db_password']}

@@ -6,6 +6,13 @@ Alle wesentlichen Änderungen am Website Manager werden hier dokumentiert. Neue 
 
 Noch keine Änderungen.
 
+## [2.0.5] - 2026-11-05
+
+### Behoben
+
+- Backup-Aufrufe erkennen das von der installierten Akeeba-CLI erwartete Format für Einstellungen. Damit greifen Ausgabeordner und Rückführung ursprünglicher Dateien auch bei einer einzelnen, kommaseparierten Option; bei unklarer CLI-Definition wird keine Sicherung gestartet.
+- Nur lokal vom Joomla-Installer erzeugte `configuration.bak.php` wird bei neuen Importen im Backup weggelassen. Bereits in der Importvorlage vorhandene Dateien dieses Namens bleiben erhalten.
+
 ## [2.0.4] - 2026-11-04
 
 ### Verbessert

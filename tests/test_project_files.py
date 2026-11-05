@@ -90,6 +90,17 @@ class LocalServerFileTests(unittest.TestCase):
         self.assertFalse((site/'configuration.php.vmm-original.php').exists())
         self.assertFalse((tools/files.MANIFEST).exists())
 
+    def test_only_installer_generated_configuration_backup_is_excluded(self):
+        for original_present in (False,True):
+            with self.subTest(original_present=original_present):
+                site,tools=self.fixture()
+                if original_present:(site/'configuration.bak.php').write_text('original backup')
+                files.prepare_local(site,tools)
+                if not original_present:(site/'configuration.bak.php').write_text('generated local backup')
+                entries={name:path.read_text() for path,name in files.archive_entries(site,tools)}
+                if original_present:self.assertEqual(entries['configuration.bak.php'],'original backup')
+                else:self.assertNotIn('configuration.bak.php',entries)
+
     def test_template_is_left_untouched_without_previous_htaccess(self):
         site,tools=self.fixture();(site/'htaccess.txt').write_text('template')
         files.prepare_local(site,tools)

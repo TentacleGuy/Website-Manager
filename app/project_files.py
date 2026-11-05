@@ -5,6 +5,7 @@ import shutil
 
 SERVER_FILES=('.htaccess','.user.ini','php.ini')
 CONFIG_FILES=('configuration.php','wp-config.php')
+INSTALLER_FILES=('configuration.bak.php',)
 MANAGER_FILES=('wp-content/mu-plugins/vmm-local.php','vmm-manager-login.php','wp-content/mu-plugins/vmm-extension-updates.php')
 MANIFEST='local-server-files.json'
 
@@ -44,7 +45,7 @@ def prepare_local(site,tools):
                 with source.open('rb') as incoming:shutil.copyfileobj(incoming,output)
             target.chmod(0o600)
         for source,target in plan:source.rename(target);moved.append((source,target))
-        metadata={'version':2,'htaccess_template':template.name if template else None,'originals':originals,'absent_server_files':absent}
+        metadata={'version':2,'htaccess_template':template.name if template else None,'originals':originals,'absent_server_files':absent,'absent_installer_files':[name for name in INSTALLER_FILES if not (site/name).exists()]}
         temporary=tools/(MANIFEST+'.new');temporary.write_text(json.dumps(metadata));temporary.chmod(0o600);temporary.replace(tools/MANIFEST)
     except Exception:
         for source,target in reversed(moved):target.rename(source)
@@ -77,6 +78,8 @@ def archive_mapping(site,tools):
             raise ValueError('Gesicherte Originaldatei fehlt oder wurde verändert: '+name)
     for name in metadata.get('absent_server_files',[]):
         if name in SERVER_FILES and (site/name).is_file():mapping[name]=None
+    for name in metadata.get('absent_installer_files',[]):
+        if name in INSTALLER_FILES and (site/name).is_file():mapping[name]=None
     template=metadata.get('htaccess_template')
     if template not in ('htaccess.txt','.htaccess.txt',None):raise ValueError('Ungültige lokale Serverdatei-Zuordnung.')
     for name in SERVER_FILES:
