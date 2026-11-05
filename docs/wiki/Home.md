@@ -4,7 +4,7 @@ Der Website Manager verwaltet lokale Joomla- und WordPress-Websites: Projekte er
 
 ## Aktuelle Version
 
-Diese Anleitungen gelten für die veröffentlichte Version **2.0.4**. Grundlage ist der [Release-Tag v2.0.4](https://github.com/TentacleGuy/Website-Manager/tree/v2.0.4). Das Wiki wird mit einer neuen Veröffentlichung auf deren Stand gebracht. Geplante Weiterentwicklungen stehen separat in der [Roadmap](Roadmap.md).
+Diese Anleitungen gelten für die veröffentlichte Version **2.0.5**. Grundlage ist der [Release-Tag v2.0.5](https://github.com/TentacleGuy/Website-Manager/tree/v2.0.5). Das Wiki wird mit einer neuen Veröffentlichung auf deren Stand gebracht. Geplante Weiterentwicklungen stehen separat in der [Roadmap](Roadmap.md).
 
 ## Erste Schritte
 
@@ -12,7 +12,7 @@ Diese Anleitungen gelten für die veröffentlichte Version **2.0.4**. Grundlage 
 2. Die Anleitung für [Windows](Installation-Windows.md), [macOS](Installation-macOS.md) oder [Linux](Installation-Linux.md) verwenden.
 3. [Ein Projekt erstellen](Projekte.md) oder [ein Akeeba-Backup importieren](Akeeba-Import.md).
 
-Die Installationspakete stehen im [Release v2.0.4](https://github.com/TentacleGuy/Website-Manager/releases/tag/v2.0.4). Das Dashboard öffnet sich unter **http://localhost:8090/** auf dem Installationsrechner.
+Die Installationspakete stehen im [Release v2.0.5](https://github.com/TentacleGuy/Website-Manager/releases/tag/v2.0.5). Das Dashboard öffnet sich unter **http://localhost:8090/** auf dem Installationsrechner.
 
 ## Anleitungen
 

@@ -29,7 +29,7 @@ Der Manager legt ein neues Projekt mit eigener Projektdatenbank an. Ein bestehen
 
 Im Projekt **Livesite-Backup erstellen** wählen, ein vorhandenes Akeeba-Profil auswählen und starten. Akeeba muss bereits in der Website installiert und seine unterstützte CLI verfügbar sein. Joomla benötigt die passende Konsolenanbindung, WordPress eine unterstützte CLI von Akeeba Backup Professional.
 
-Der Manager übersteuert die Ausgabe für diesen Lauf auf ein lokales JPA-Archiv ohne Cloud-Nachbearbeitung, Löschquoten oder Abschluss-E-Mails. Gespeicherte Profile bleiben unverändert; ihre Filter wirken weiterhin. Erst nach Abschluss und Prüfung der Archivteile wird der Download freigegeben.
+Der Manager übersteuert die Ausgabe für diesen Lauf auf ein lokales JPA-Archiv ohne Cloud-Nachbearbeitung, Löschquoten oder Abschluss-E-Mails. Gespeicherte Profile bleiben unverändert; ihre Filter wirken weiterhin. Der Manager ermittelt bei Joomla die Optionsdefinition der tatsächlich installierten Akeeba-CLI und übergibt die Einstellungen in der passenden Form. Ist diese Definition nicht lesbar, wird die Sicherung mit einer Fehlermeldung angehalten, statt stillschweigend lokale Profileinstellungen zu verwenden. Erst nach Abschluss und Prüfung der Archivteile wird der Download freigegeben.
 
 Von Akeeba erfolgreich abgeschlossene Archive mit vorhandenen, geprüften Archivteilen stehen zum Download bereit. Ist der Nachweis ursprünglicher Server- oder CMS-Konfigurationen unvollständig, erscheint **Serverdateien ungeprüft** mit einer Erläuterung. Das bedeutet nicht, dass Akeeba das Archiv als defekt gemeldet hat. Es ist aber keine vom Manager bestätigte Produktionssicherung und wird nicht als geprüfte Wiederherstellungsquelle angeboten.
 
@@ -53,7 +53,11 @@ Bei importierten Projekten verwendet der Manager die vor dem ersten lokalen Eing
 
 Das Backup kombiniert die aktuellen Website-Inhalte und die aktuelle lokale Projektdatenbank mit den ursprünglichen Dateieinstellungen. Dazu gehören Sitename, Mailversand, SMTP-Zugänge und die ursprünglichen Datenbankzugänge. Beim Installieren auf einem anderen Server kann Akeeba die Datenbankzugänge und Zielpfade erneut anpassen. Ein deaktivierter lokaler Mailversand wird dadurch nicht als neue Produktionseinstellung übernommen.
 
+Bei neuen Importen wird außerdem festgehalten, ob `configuration.bak.php` bereits in der Vorlage vorhanden war. Nur wenn die Datei erst durch den lokalen Installer entstanden ist, bleibt sie beim Backup draußen. Bei älteren Importen ohne diese Herkunftsinformation wird sie vorsichtshalber beibehalten.
+
 Fehlen durch Prüfsummen erfasste Originaldateien oder wurden sie verändert, bricht der Export ab. Die Originale deshalb nicht löschen oder bearbeiten. Für ältere Importe ohne gesicherte CMS-Konfiguration ist die ursprüngliche Importvorlage nötig; ein Manager-Update allein rekonstruiert diese Einstellungen nicht. Wird bei einer solchen Akeeba-Sicherung der Nachweis nicht erbracht, bleibt sie als ungeprüft gekennzeichnet.
+
+Nach einem Update eine neue Livesite-Sicherung erzeugen und deren Status prüfen. Bereits vorhandene ungeprüfte Archive werden durch das Update nicht nachträglich umgeschrieben oder als bestätigt eingestuft.
 
 ## Wiederherstellungsprüfung
 

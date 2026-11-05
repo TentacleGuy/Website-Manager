@@ -16,7 +16,7 @@ Ein direkt hochgeladenes ZIP wird auch in der Bibliothek gespeichert. Passt es n
 
 **Projekt → Erweiterungen → Updates prüfen** lädt den aktuellen CMS-Stand. Die zuvor angezeigte Liste ist ein gespeicherter Stand mit Prüfzeitpunkt. Verfügbare Updates stehen oben; Joomla-Core-Erweiterungen lassen sich gesondert filtern.
 
-**In Bibliothek speichern** übernimmt eine unterstützte Updateanbindung und archiviert das verfügbare Originalpaket. Die separate globale Ansicht **Aus Projekt übernehmen** ist in Version 2.0.4 entfernt.
+**In Bibliothek speichern** übernimmt eine unterstützte Updateanbindung und archiviert das verfügbare Originalpaket. Die separate globale Ansicht **Aus Projekt übernehmen** ist in Version 2.0.5 entfernt.
 
 WordPress verwendet native Updateinformationen und bei WPML gegebenenfalls den vorhandenen OTGS Installer; Joomla verwendet registrierte Update-XML-Adressen. Projektbasierte Quellen benötigen das Herkunftsprojekt für frische Downloadlinks. Ohne unterstützten Originaldownload wird kein Herstellerpaket aus installierten Dateien nachgebaut.
 

@@ -1,6 +1,6 @@
 # Wiki-Stand und Dokumentationspflege
 
-Das Benutzerhandbuch unter `docs/wiki/` und das GitHub-Wiki beschreiben ausschließlich die veröffentlichte Version **2.0.4**. GitHub führt sie als neuestes stabiles Release. Grundlage ist der Release-Tag `v2.0.4` auf Commit `6f26630e652ffad2abb379116d18d04d996373b4`. Geprüft am 4. November 2026 nach der Veröffentlichung.
+Das Benutzerhandbuch unter `docs/wiki/` und das GitHub-Wiki beschreiben ausschließlich die veröffentlichte Version **2.0.5**. GitHub führt sie als neuestes stabiles Release. Grundlage ist der Release-Tag `v2.0.5` auf Commit `10a26d3dfb71c16347f09a7090c4d0a8b5e2a99b`. Geprüft am 5. November 2026 nach der Veröffentlichung.
 
 ## Abgleich mit dem Release
 
@@ -9,13 +9,13 @@ Das Benutzerhandbuch unter `docs/wiki/` und das GitHub-Wiki beschreiben ausschli
 - Dateimanager und Papierkorb: `app/file_service.py`, `app/cleanup_service.py` und `app/recycle_service.py`.
 - Zeitpläne und Systemverwaltung: `app/schedule_service.py`, `app/system_service.py` und `app/folder_picker.py`.
 - Installation und Laufzeiten: Plattform-Installer, `scripts/setup.py`, `scripts/installer_config.py`, `app/environment_service.py`, `app/runtime.py`, `app/database_profiles.py` und `infra/runtime/Dockerfile`.
-- Update-Erkennung: `app/update_service.py`, zusätzlich der Prüfer aus Version 1.2.3 gegen das neue Paket.
+- Update-Erkennung: `app/update_service.py`, zusätzlich der Prüfer aus Version 2.0.4 gegen das neue Paket.
 
 Die zuvor auf der Roadmap stehenden Themen sind bereits mit 2.0.0 veröffentlicht und in die regulären Anleitungen übernommen. Die Roadmap enthält derzeit keine weitere verbindliche Planung und keine erfundenen Termine oder Versionszusagen.
 
 ## Prüfungen zur Veröffentlichung
 
-Der vollständige Testlauf in einer temporären Linux-Testumgebung umfasste 254 Tests und war erfolgreich; 9 Tests wurden mangels Plattformwerkzeugen übersprungen. Die PHP-gestützten Ablauf- und Dateitests wurden zusätzlich lokal ausgeführt. JavaScript-/PHP-Syntax, Paketbau, Paketversionen, ZIP-Inhalte und SHA-256-Prüfsummen wurden geprüft. Der GitHub-Release-Workflow und die Plattformprüfungen für Windows, macOS und Linux für `v2.0.4` waren erfolgreich; die veröffentlichten Update- und Installationspakete sowie ihre Prüfsummen sind vorhanden.
+Der vollständige Testlauf in einer temporären Linux-Testumgebung umfasste 257 Tests und war erfolgreich; 9 Tests wurden mangels Plattformwerkzeugen übersprungen. Die PHP-gestützten Ablauf- und Dateitests wurden zusätzlich lokal ausgeführt. Ein echter Joomla-Import mit anschließendem nativem ZIP-Backup bestätigte identische Website-Dateiinhalte und ursprüngliche Konfigurationen. Datenbankunterschiede betrafen ausschließlich Akeebas Sicherungseinträge; neu erzeugte Installer-Dateien und Betriebsprotokolle wurden getrennt bewertet. JavaScript-/PHP-Syntax, Paketbau, Paketversionen, ZIP-Inhalte und SHA-256-Prüfsummen wurden geprüft. Der GitHub-Release-Workflow und die Plattformprüfungen für Windows, macOS und Linux für `v2.0.5` waren erfolgreich; die veröffentlichten Update- und Installationspakete sowie ihre Prüfsummen sind vorhanden.
 
 Eine echte Wiederherstellung auf einem externen Zielserver und eine Aktualisierung auf einem anderen Rechner sind damit nicht bestätigt.
 

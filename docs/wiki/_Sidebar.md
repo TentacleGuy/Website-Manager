@@ -1,4 +1,4 @@
-**Website Manager 2.0.4**
+**Website Manager 2.0.5**
 
 - [Startseite](Home.md)
 - [Voraussetzungen](Voraussetzungen.md)
