@@ -1,6 +1,7 @@
 """Build a distributable bootstrap ZIP from an explicit source allowlist."""
 import argparse
 import hashlib
+import json
 from pathlib import Path
 import zipfile
 import shutil
@@ -12,6 +13,12 @@ FILES = ('Dockerfile', 'compose.yaml', 'requirements.txt', '.dockerignore',
 
 
 def source_files(root):
+    from changelog import notes
+    release = json.loads((root/'app/release.json').read_text(encoding='utf-8'))
+    (root/'app/release-notes.json').write_text(
+        json.dumps({'version':release['version'],'notes':notes(root)},ensure_ascii=False),
+        encoding='utf-8',
+    )
     for system in ('windows','macos','linux'):
         target=root/'app/installer_assets'/system
         target.mkdir(parents=True,exist_ok=True)

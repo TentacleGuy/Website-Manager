@@ -16,16 +16,19 @@
  label.append(next,document.createTextNode('Beim nächsten Start abspielen'));
  footer.append(label);dialog.append(close,frame,footer);document.body.append(dialog);
 
- const tab=node('button','Startvideo');tab.type='button';tab.id='system-tab-splash';tab.dataset.tab='splash';tab.setAttribute('role','tab');tab.setAttribute('aria-controls','system-panel-splash');tab.setAttribute('aria-selected','false');tab.tabIndex=-1;
- const tabs=document.querySelector('[data-tab-group="system"]');tabs.append(tab);
- const panel=node('div');panel.id='system-panel-splash';panel.dataset.panelGroup='system';panel.dataset.panel='splash';panel.setAttribute('role','tabpanel');panel.setAttribute('aria-labelledby',tab.id);panel.hidden=true;
  const section=node('section',null,'panel'),heading=node('h2','Startvideo'),settingLabel=node('label',null,'check'),setting=node('input');setting.type='checkbox';setting.checked=enabled;
  settingLabel.append(setting,document.createTextNode('Startvideo beim Öffnen des Projektmanagers abspielen'));
  const note=node('p','Diese Einstellung gilt für diesen Browser. Das Video startet automatisch und kann jederzeit geschlossen werden. Blockiert der Browser den Start mit Ton, wird es stumm abgespielt.','small-note');
  const preview=node('button','Startvideo ansehen');preview.type='button';
- section.append(heading,settingLabel,note,preview);panel.append(section);document.querySelector('#system-view').append(panel);
- tab.onclick=()=>{location.hash='#system/splash';};
- for(const button of tabs.querySelectorAll('[role="tab"]'))button.onkeydown=e=>{const all=[...tabs.querySelectorAll('[role="tab"]')],i=all.indexOf(button);let target;if(e.key==='ArrowRight')target=(i+1)%all.length;else if(e.key==='ArrowLeft')target=(i+all.length-1)%all.length;else if(e.key==='Home')target=0;else if(e.key==='End')target=all.length-1;else return;e.preventDefault();all[target].focus();all[target].click();};
+ section.append(heading,settingLabel,note,preview);
+ document.querySelector('#system-panel-akeeba').append(section);
+ const tabs=document.querySelector('[data-tab-group="system"]');
+ for(const button of tabs.querySelectorAll('[role="tab"]'))button.onkeydown=e=>{
+  const all=[...tabs.querySelectorAll('[role="tab"]')],index=all.indexOf(button);
+  const targets={ArrowRight:(index+1)%all.length,ArrowLeft:(index+all.length-1)%all.length,Home:0,End:all.length-1};
+  if(!(e.key in targets))return;
+  e.preventDefault();all[targets[e.key]].focus();all[targets[e.key]].click();
+ };
 
  function preference(value){
   enabled=value;next.checked=setting.checked=value;

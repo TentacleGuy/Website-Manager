@@ -3,7 +3,7 @@ jobKinds['service-check']='Dienste und Rechte prüfen';
 jobKinds['service-control']='Dienst steuern';
 let systemManagerStopped=false,servicesEntering=false;
 const infrastructurePanel=$('#system-panel-infrastructure');
-$('#system-tab-infrastructure').textContent='Dienste & Rechte';
+$('#system-tab-infrastructure').textContent='Dienste';
 const servicePanel=workspacePanel('Dienste und Berechtigungen');
 servicePanel.id='system-services';
 const serviceToolbar=el('div',undefined,'extra-actions');
@@ -11,11 +11,30 @@ const servicesCheck=localButton('Dienste und Rechte prüfen',()=>checkSystemServ
 serviceToolbar.append(servicesCheck);
 const serviceTime=el('p',undefined,'small-note'),serviceList=el('div'),permissionList=el('div'),desktopPanel=workspacePanel('Ordner öffnen und Freigaben');
 serviceList.id='system-service-list';permissionList.id='system-permission-list';
-servicePanel.append(serviceToolbar,serviceTime,serviceList,el('h3','Zugriffsrechte'),permissionList);
+servicePanel.append(serviceToolbar,serviceTime,serviceList);
+const permissionsPanel=workspacePanel('Zugriffsrechte');
+permissionsPanel.append(permissionList);
+const serviceTabs=el('div',undefined,'subtabs');
+let serviceArea='services';
+function showServiceArea(key){
+    serviceArea=key;
+    viewTabs(serviceTabs,[['services','Dienste'],['rights','Rechte'],['shares','Freigaben']],key,showServiceArea);
+    servicePanel.hidden=key!=='services';
+    permissionsPanel.hidden=key!=='rights';
+    desktopPanel.hidden=key!=='shares';
+}
+infrastructurePanel.prepend(serviceTabs,permissionsPanel);
 infrastructurePanel.prepend(desktopPanel);infrastructurePanel.prepend(servicePanel);
 const infrastructureLegacy=el('details');infrastructureLegacy.append(el('summary','Weitere Informationen zur Umgebung'));
-for(const child of [...infrastructurePanel.children])if(child!==servicePanel&&child!==desktopPanel)infrastructureLegacy.append(child);
+for(const child of [...infrastructurePanel.children])if(![servicePanel,desktopPanel,serviceTabs,permissionsPanel].includes(child))infrastructureLegacy.append(child);
 infrastructurePanel.append(infrastructureLegacy);
+infrastructurePanel.prepend(serviceTabs);
+showServiceArea(serviceArea);
+const updatesHeader=$('#system-panel-updates h2');
+const updatesTitle=el('div',undefined,'section-title-actions');
+updatesHeader.before(updatesTitle);
+updatesTitle.append(updatesHeader,$('#manager-check'));
+
 
 function localDesktopAvailable(){return ['localhost','127.0.0.1','[::1]','vmm.test'].includes(location.hostname);}
 async function checkSystemServices(){servicesCheck.disabled=true;try{await api('system-services/check',{});await refresh(true);}catch(e){message(e);}finally{servicesCheck.disabled=jobActive('system-services');}}
@@ -37,16 +56,17 @@ async function requestDesktopAccess(repair=false){
         const poll=setInterval(async()=>{if(!d.open||Date.now()>deadline){clearInterval(poll);if(d.open)status.textContent='Keine Rückmeldung. Bitte die lokale Anbindung und die Browserfreigabe prüfen.';return;}try{const result=await api('folder-picker/'+request.id);if(result.status!=='waiting'){clearInterval(poll);status.textContent=result.status==='done'?'Lokale Anbindung antwortet. Der Ordnerdialog wurde erfolgreich verwendet. Keine Speicherorte geändert.':'Lokale Anbindung antwortet. Die Ordnerauswahl wurde abgebrochen.';}}catch(e){clearInterval(poll);status.textContent=e.message;}},1000);
     }catch(e){message(e);}
 }
+function isServiceView(){return ['#system','#system/infrastructure'].includes(location.hash);}
 async function renderSystemServices(){
-    const value=await api('system-services');if(view!=='system'||!location.hash.endsWith('/infrastructure'))return;
+    const value=await api('system-services');if(view!=='system'||!isServiceView())return;
     const active=jobActive('system-services');servicesCheck.disabled=active;
-    serviceTime.textContent=active?'Prüfung oder Dienstaktion läuft …':value.checked?'Letzte Prüfung: '+new Date(value.checked*1000).toLocaleString('de-DE'):'Noch nicht geprüft.';
+    serviceTime.textContent=active?'Prüfung oder Dienstaktion läuft …':value.checked?'Letzte Prüfung: '+managerDate(value.checked,true):'Noch nicht geprüft.';
     if(value.action_error)serviceTime.textContent+=' · '+value.action_error;
     if(unchanged(serviceList,[value,active]))return;
     const labels={running:'Läuft',exited:'Beendet',created:'Angelegt',restarting:'Startet neu',paused:'Pausiert',dead:'Fehler',missing:'Nicht eingerichtet'};
     serviceList.replaceChildren(workspaceTable(['Dienst','Zustand','Details','Aktionen'],(value.services||[]).map(service=>{
         const actions=el('div',undefined,'extra-actions service-actions');
-        for(const action of service.actions){if(action==='start'&&service.status==='running')continue;if(['stop','restart'].includes(action)&&service.status!=='running')continue;const b=localButton({start:'Starten',restart:'Neu starten',stop:'Beenden'}[action],()=>confirmServiceControl(service,action));b.title={start:'Starten',restart:'Neu starten',stop:'Beenden'}[action]+' · '+service.name;b.setAttribute('aria-label',b.title);b.classList.add('icon-action');b.replaceChildren(iconNode({start:'play-fill',restart:'arrow-clockwise',stop:'stop-fill'}[action]));b.disabled=active;actions.append(b);}
+        for(const action of service.actions){if(action==='start'&&service.status==='running')continue;if(['stop','restart'].includes(action)&&service.status!=='running')continue;const b=localButton({start:'Starten',restart:'Neu starten',stop:'Beenden'}[action],()=>confirmServiceControl(service,action));b.title={start:'Starten',restart:'Neu starten',stop:'Beenden'}[action]+' · '+service.name;b.setAttribute('aria-label',b.title);b.dataset.iconLabel={start:'Starten',restart:'Neu starten',stop:'Beenden'}[action];b.classList.add('icon-action');b.replaceChildren(iconNode({start:'play-fill',restart:'arrow-clockwise',stop:'stop-fill'}[action]));b.disabled=active;actions.append(b);}
         if(!service.actions.length)actions.append(el('small','Lokale Starten-Datei verwenden.'));
         return [service.name,workspaceBadge(labels[service.status]||service.status,service.status==='running'?'done':service.status==='dead'?'error':'queued'),service.detail,actions];
     })));
@@ -56,11 +76,11 @@ async function renderSystemServices(){
     const test=localButton('Ordnerfreigabe anfragen',()=>requestDesktopAccess()),repair=localButton('Ordneranbindung erneut einrichten',()=>requestDesktopAccess(true));
     test.disabled=repair.disabled=!localDesktopAvailable()||!value.desktop_registered;actions.append(test,repair);desktopPanel.append(actions);
     desktopPanel.append(el('p',value.desktop_registered?'Die Anbindung ist laut lokaler Einrichtung registriert. Der Dialogtest prüft, ob sie auf diesem Rechner tatsächlich antwortet.':'Einrichtung fehlt: die lokale Starten-Datei im Installationsordner ausführen. Das richtet die Anbindung für deinen Benutzer ein.','small-note'));
-    if(value.desktop_test)desktopPanel.append(el('p','Letzte Rückmeldung des lokalen Ordnerdialogs: '+new Date(value.desktop_test.checked*1000).toLocaleString('de-DE')+' · '+(value.desktop_test.status==='selected'?'Ordner ausgewählt':'Auswahl abgebrochen'),'small-note'));
+    if(value.desktop_test)desktopPanel.append(el('p','Letzte Rückmeldung des lokalen Ordnerdialogs: '+managerDate(value.desktop_test.checked,true)+' · '+(value.desktop_test.status==='selected'?'Ordner ausgewählt':'Auswahl abgebrochen'),'small-note'));
     const help=el('details');help.append(el('summary','Eine Freigabe wurde abgelehnt – was tun?'),el('p','Browser: In den Website-Einstellungen für localhost die Anfrage zum Öffnen externer Anwendungen wieder erlauben. Danach „Ordnerfreigabe anfragen“ anklicken. Eine dauerhaft abgelehnte Anfrage kann die Website nicht selbst zurücksetzen.'),el('p','macOS: Systemeinstellungen → Datenschutz & Sicherheit → Dateien & Ordner. Den Zugriff für die Ordneranbindung bzw. die angezeigte Anwendung erlauben. Windows: Bei gesperrtem Ordner den überwachten Ordnerzugriff unter Windows-Sicherheit prüfen. Linux: Ordnerrechte und Desktop-Sitzung prüfen; für den Auswahldialog wird zenity oder kdialog benötigt.'),el('p','Docker: Freigaben für Speicherordner werden in Docker Desktop verwaltet. Ist Docker oder der Manager beendet, startet die lokale Starten-Datei die Umgebung wieder. Betriebssystemfreigaben werden nicht pauschal angefordert.'));
     desktopPanel.append(help);
 }
-const routeBeforeServices=route;route=async function(){const entering=location.hash==='#system/infrastructure'&&!servicesEntering;servicesEntering=location.hash==='#system/infrastructure';await routeBeforeServices();if(entering){await renderSystemServices();if(!jobActive('system-services'))await checkSystemServices();}};
-const refreshBeforeServices=refresh;refresh=async function(force=false){if(systemManagerStopped)return;await refreshBeforeServices(force);if(view==='system'&&location.hash.endsWith('/infrastructure'))await renderSystemServices();};
+const routeBeforeServices=route;route=async function(){const entering=isServiceView()&&!servicesEntering;servicesEntering=isServiceView();await routeBeforeServices();if(entering){await renderSystemServices();if(!jobActive('system-services'))await checkSystemServices();}};
+const refreshBeforeServices=refresh;refresh=async function(force=false){if(systemManagerStopped)return;await refreshBeforeServices(force);if(view==='system'&&isServiceView())await renderSystemServices();};
 const openFolderBeforeSystemHelp=openProjectFolder;
 openProjectFolder=function(p){openFolderBeforeSystemHelp(p);const d=$('#project-folder-dialog');if(!d)return;d.querySelector('.extra-actions')?.append(localButton('Dienste & Rechte',()=>{d.close();location.hash='#system/infrastructure';}));};

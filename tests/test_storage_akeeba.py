@@ -85,6 +85,20 @@ class StorageMigrationTests(unittest.TestCase):
         self.assertEqual(state['status'],'done')
         self.assertIn('CUSTOM=keep',(root/'installation/.env').read_text())
 
+    def test_path_switch_uses_existing_target_without_copying_files(self):
+        root,plan,mapped=self.fixture()
+        plan['switch_only']=True
+        target=root/'targets/extensions'
+        (target/'existing.zip').write_bytes(b'target-package')
+        completed=types.SimpleNamespace(returncode=0,stdout=b'test-manager',stderr=b'')
+        with patch('storage_worker.Path',side_effect=mapped),patch('storage_worker.subprocess.run',return_value=completed),patch('storage_worker.shutil.copytree') as copy:
+            worker.apply(plan)
+        copy.assert_not_called()
+        self.assertEqual(sorted(path.name for path in target.iterdir()),['existing.zip'])
+        self.assertEqual((target/'existing.zip').read_bytes(),b'target-package')
+        self.assertEqual((root/'sources/extensions/package.zip').read_bytes(),b'original-package')
+        self.assertEqual(json.loads((root/'vmm-data/storage/settings.json').read_text()),plan['paths'])
+
     def test_failed_copy_restores_old_settings_and_original_data(self):
         root,plan,mapped=self.fixture();settings=root/'vmm-data/storage/settings.json';settings.write_text('{"extensions":"/old/packages"}')
         original=(root/'installation/.env').read_bytes()

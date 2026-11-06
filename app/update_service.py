@@ -1,4 +1,5 @@
 """GitHub release checks and supervised Docker self-updates."""
+from functools import lru_cache
 import hashlib
 import io
 import json
@@ -101,6 +102,23 @@ def progress(ident,expected,message,phase,**extra):
         value={'id':ident,'version':expected,'status':'running','message':message,'phase':phase,'time':int(time.time()),**extra}
         temp=file.with_suffix('.new');temp.write_text(json.dumps(value));temp.replace(file)
     return value
+
+
+@lru_cache(maxsize=1)
+def current_release_notes():
+    version = RELEASE['version']
+    bundled = Path(__file__).with_name('release-notes.json')
+    if bundled.is_file():
+        entry = json.loads(bundled.read_text(encoding='utf-8'))
+        if entry.get('version') == version:
+            return entry['notes']
+    changelog = Path(__file__).resolve().parent.parent / 'CHANGELOG.md'
+    if changelog.is_file():
+        for section in changelog.read_text(encoding='utf-8').split('\n## [')[1:]:
+            if section.startswith(version + ']'):
+                return section.partition('\n')[2].strip()
+    release = json.loads(fetch('https://api.github.com/repos/' + REPOSITORY + '/releases/tags/v' + version))
+    return release.get('body') or ''
 
 
 def status():
@@ -206,6 +224,8 @@ def prepare_install(expected,ident):
     image=own['Image']
     with db() as c:
         row=c.execute("SELECT id FROM jobs WHERE resource='manager-update' AND kind='manager-install' AND status IN ('queued','running') ORDER BY created DESC LIMIT 1").fetchone()
+    if row:
+        (stage/'activity.json').write_text(json.dumps({'job':row['id']}),encoding='utf-8')
     progress(ident,expected,'Installationsordner für den Updatehelfer wird geprüft …','mount-check',job=row['id'] if row else None)
     probe="from pathlib import Path; root=Path('/installation'); required=['compose.yaml','data/updates/"+ident+"/apply.py','data/updates/"+ident+"/manager-update.zip']; missing=[p for p in required if not (root/p).is_file()]; assert not missing, 'Installationsordner falsch eingebunden; fehlend: '+', '.join(missing)"
     op.command(['docker','run','--rm','--mount','type=bind,source='+host_root+',target=/installation,readonly',image,'python','-c',probe],timeout=30)

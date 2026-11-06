@@ -12,3 +12,23 @@ function decorateControls(root){if(root.nodeType!==Node.ELEMENT_NODE&&root!==doc
 decorateNavigation();decorateControls(document);
 const iconObserver=new MutationObserver(records=>{const roots=new Set();for(const record of records){if(record.type==='characterData'){const control=record.target.parentElement?.closest('button,a.button-link');if(control)roots.add(control);}else{if(record.target.matches?.('button,a.button-link'))roots.add(record.target);for(const node of record.addedNodes)if(node.nodeType===Node.ELEMENT_NODE)roots.add(node);}}for(const root of roots)if(root.isConnected)decorateControls(root);});
 iconObserver.observe(document.body,{childList:true,subtree:true,characterData:true});
+
+for(const [label,icon] of Object.entries({
+    'Livesite-Backup erstellen':'cloud-plus',
+    'Livesite-Backup herunterladen':'cloud-arrow-down',
+    'Neuestes Livesite-Backup herunterladen':'cloud-arrow-down',
+    'Projekt erstellen':'person-plus',
+    'Globaler Schlüssel':'key',
+    'Erweiterung entfernen':'trash',
+    'In Projekt installieren':'box-arrow-in-right',
+    'Versionen abrufen':'arrow-clockwise',
+    'Version herunterladen':'download',
+    'Jetzt ausführen':'play-fill',
+    'Pausieren':'stop-fill',
+    'Aktivieren':'play-fill',
+    'CMS-Backend':'box-arrow-up-right',
+    'Update installieren':'download',
+    'Details anzeigen':'info-circle',
+    'Speichergröße aktualisieren':'arrow-clockwise',
+    'Ordner wählen':'folder2-open'
+}))actionIcons.set(label,icon);

@@ -57,6 +57,20 @@ def available():
     return catalog() if path.is_file() else []
 
 
+def inventory():
+    catalog_rows=available()
+    cached=DATA/'tools/kickstart'
+    downloaded={path.parent.name for path in cached.glob('*/kickstart.php') if path.is_file() and re.fullmatch(r'\d+\.\d+\.\d+',path.parent.name)}
+    versions={row['version']:row for row in catalog_rows}
+    default=catalog_rows[0]['version'] if catalog_rows else None
+    return {
+        'versions':[{**versions.get(version,{'version':version}), 'available':version in versions, 'downloaded':version in downloaded}
+                    for version in sorted(versions.keys()|downloaded,key=lambda v:tuple(map(int,v.split('.'))),reverse=True)],
+        'default':default,
+        'manual':(DATA/'tools/kickstart.php').is_file(),
+    }
+
+
 def ensure(version='auto',php='8.4'):
     with LOCK:
         if version=='manual':

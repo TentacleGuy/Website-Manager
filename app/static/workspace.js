@@ -5,11 +5,124 @@ function workspacePanel(title,description=''){const section=el('section',undefin
 function workspaceFacts(values){const dl=el('dl',undefined,'workspace-facts');for(const [label,value] of values){const dd=el('dd');dd.append(value instanceof Node?value:document.createTextNode(String(value??'—')));dl.append(el('dt',label),dd);}return dl;}
 function workspaceBadge(text,kind=''){return el('span',text,'badge '+kind);}
 function workspaceChoices(items,current,onSelect){const list=el('div',undefined,'workspace-choices');for(const item of items){const b=localButton('',()=>onSelect(item.id),'workspace-choice');b.setAttribute('aria-pressed',String(item.id===current));const text=el('span');text.append(el('strong',item.name),el('small',item.meta));b.append(text);if(item.badge)b.append(item.badge);list.append(b);}return list;}
-function workspaceTable(headers,rows){const wrap=el('div',undefined,'project-table-scroll'),table=el('table',undefined,'project-table workspace-table'),head=el('thead'),tr=el('tr');for(const h of headers){const th=el('th',h);th.scope='col';tr.append(th);}head.append(tr);table.append(head);const body=el('tbody');for(const cells of rows){const row=el('tr');cells.forEach((cell,i)=>{const td=el('td');td.dataset.label=headers[i];td.append(cell instanceof Node?cell:document.createTextNode(String(cell??'—')));row.append(td);});body.append(row);}table.append(body);wrap.append(table);return wrap;}
+const workspaceTables=new Map();
+const tablePageSize=20;
+function managerTime(timestamp,timeZone){
+    return new Date(timestamp*1000).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit',timeZone});
+}
+function managerDate(timestamp,withTime=false,timeZone){
+    if(!timestamp)return '—';
+    const date=new Date(timestamp*1000);
+    const day=date.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric',timeZone});
+    return withTime?day+' · '+managerTime(timestamp,timeZone):day;
+}
+function workspaceTable(headers,rows,settings={}){
+    const key=settings.key||[view,view==='projects'?location.hash: '',...headers].join('|');
+    if(!workspaceTables.has(key))workspaceTables.set(key,{query:'',page:0,column:-1,direction:1});
+    const state=workspaceTables.get(key);
+    const wrapper=el('div',undefined,'managed-table'),scroll=el('div',undefined,'project-table-scroll');
+    const table=el('table',undefined,'project-table workspace-table'),head=el('thead'),body=el('tbody');
+    const search=settings.search||el('input');
+    search.type='search';search.placeholder='Alle Spalten durchsuchen …';search.setAttribute('aria-label',search.placeholder);
+    if(!settings.search)search.value=state.query;
+    const legend=el('div',undefined,'table-legend'),footer=el('nav',undefined,'table-pages');
+    footer.setAttribute('aria-label','Tabellenseiten');
+    const textOf=cell=>{
+        if(cell instanceof HTMLInputElement)return cell.value;
+        if(!(cell instanceof Element))return String(cell??'');
+        return cell.textContent+' '+[cell,...cell.querySelectorAll('[aria-label]')].map(node=>node.getAttribute('aria-label')||'').join(' ');
+    };
+    const valueFor=(row,column)=>{
+        const cell=rows[row][column];
+        if(cell instanceof HTMLInputElement)return cell.value;
+        if(cell instanceof Element&&cell.dataset.sortValue!==undefined)return Number(cell.dataset.sortValue);
+        return settings.values?.[row]?.[column]??textOf(cell);
+    };
+    const actions=new Map();
+    rows.forEach(row=>row.forEach(cell=>{
+        if(!(cell instanceof Element))return;
+        for(const control of [cell,...cell.querySelectorAll('button,a,summary')]){
+            if(!control.matches('button,a,summary'))continue;
+            if(control.tagName==='A'&&actionIcons.has(control.textContent.trim()))control.classList.add('button-link');
+            decorateAction(control);
+            const icon=control.dataset.iconName||[...control.querySelector('.ui-icon')?.classList||[]].find(name=>name.startsWith('icon-'))?.slice(5);
+            const label=control.dataset.iconLabel||control.getAttribute('aria-label')||control.title;
+            if(icon&&label)actions.set(icon+'|'+label,[icon,label]);
+        }
+    }));
+    if(rows.some(row=>row.some(cell=>cell instanceof Element&&cell.querySelector('.downloaded-check'))))
+        actions.set('check-lg|Gesichert',['check-lg','Gesichert']);
+    for(const [icon,label] of actions.values()){
+        const entry=el('span');entry.append(iconNode(icon),document.createTextNode(label));legend.append(entry);
+    }
+    function draw(){
+        const query=(settings.search?search.value:state.query).trim().toLocaleLowerCase('de');
+        const terms=query.split(/\s+/).filter(Boolean);
+        const indices=rows.map((_,i)=>i).filter(i=>{
+            if(settings.remote||!terms.length)return true;
+            const text=rows[i].map(textOf).join(' ').toLocaleLowerCase('de');
+            return terms.every(term=>text.includes(term));
+        });
+        if(!settings.remote&&state.column>=0)indices.sort((a,b)=>{
+            const x=valueFor(a,state.column),y=valueFor(b,state.column);
+            return state.direction*(typeof x==='number'&&typeof y==='number'?x-y:String(x??'').localeCompare(String(y??''),'de',{numeric:true}));
+        });
+        const count=settings.remote?settings.total:indices.length;
+        const pages=Math.max(1,Math.ceil(count/tablePageSize));
+        state.page=Math.min(settings.remote?settings.page:state.page,pages-1);
+        const heading=el('tr');
+        headers.forEach((label,column)=>{
+            const th=el('th',label);th.scope='col';
+            if(!/^Aktion(en)?$/.test(label)){
+                const selected=(settings.remote?settings.column:state.column)===column;
+                const direction=settings.remote?settings.direction:state.direction;
+                th.setAttribute('aria-sort',selected?(direction===1?'ascending':'descending'):'none');
+                th.replaceChildren(localButton(label+(selected?(direction===1?' ↑':' ↓'):''),()=>{
+                    if(settings.remote){settings.sort(column);return;}
+                    state.direction=state.column===column?-state.direction:1;state.column=column;state.page=0;draw();
+                },'column-sort'));
+            }
+            heading.append(th);
+        });
+        head.replaceChildren(heading);body.replaceChildren();
+        const visible=settings.remote?indices:indices.slice(state.page*tablePageSize,(state.page+1)*tablePageSize);
+        for(const i of visible){
+            const row=el('tr');
+            rows[i].forEach((cell,column)=>{
+                const td=el('td');td.dataset.label=headers[column];
+                td.append(cell instanceof Node?cell:document.createTextNode(String(cell??'—')));row.append(td);
+            });
+            body.append(row);
+        }
+        if(!visible.length){const row=el('tr'),cell=el('td','Keine passenden Einträge.');cell.colSpan=headers.length;row.append(cell);body.append(row);}
+        footer.replaceChildren();
+        if(pages>1){
+            const go=page=>{if(settings.remote)settings.go(page);else{state.page=page;draw();}};
+            const previous=localButton('‹ Zurück',()=>go(state.page-1));previous.disabled=state.page===0;footer.append(previous);
+            const buttons=new Set([0,pages-1,state.page-1,state.page,state.page+1].filter(page=>page>=0&&page<pages));
+            let last=-1;
+            for(const page of [...buttons].sort((a,b)=>a-b)){
+                if(page-last>1)footer.append(el('span','…'));
+                const b=localButton(String(page+1),()=>go(page));if(page===state.page)b.setAttribute('aria-current','page');footer.append(b);last=page;
+            }
+            const next=localButton('Weiter ›',()=>go(state.page+1));next.disabled=state.page===pages-1;footer.append(next);
+        }
+    }
+    if(settings.search&&!settings.remote){
+        const filter=()=>{state.page=0;draw();};
+        search.oninput=filter;wrapper.addEventListener('table-search',filter);
+    }
+    if(!settings.search&&!settings.noSearch){
+        search.oninput=()=>{state.query=search.value;state.page=0;draw();};
+        wrapper.append(search);
+    }
+    if(legend.childElementCount)wrapper.append(legend);
+    table.append(head,body);scroll.append(table);wrapper.append(scroll,footer);draw();return wrapper;
+}
 function workspaceStorageSize(bytes){return bytes===null?'Projektdateien und Datenbankexport':formatBytes(bytes);}
 function cleanupButton(kind,id,label='Löschen'){return localButton(label,()=>openCleanup(kind,id),'danger');}
 async function openCleanup(kind,id){try{const value=await api('cleanup/'+kind+'/'+encodeURIComponent(id));$('#cleanup-dialog')?.remove();const dialog=el('dialog');dialog.id='cleanup-dialog';dialog.setAttribute('aria-labelledby','cleanup-title');dialog.append(el('h2',value.label+' löschen?'));dialog.firstChild.id='cleanup-title';dialog.append(el('strong',value.name),el('p',value.note),workspaceFacts([['Speicherplatz',workspaceStorageSize(value.size)],['Dateien / Gruppen',value.files]]));if(value.projects.length)dialog.append(el('p','Projektzuordnungen: '+value.projects.join(', '),'small-note'));const footer=el('footer'),cancel=localButton('Abbrechen',()=>dialog.close()),remove=localButton('Endgültig löschen',async()=>{remove.disabled=true;cancel.disabled=true;try{await api('cleanup/'+kind+'/'+encodeURIComponent(id)+'/delete',{});dialog.close();workspaceState.dirty=true;await refresh();}catch(e){error.textContent=e.message;remove.disabled=false;cancel.disabled=false;}},'danger');const error=el('p',undefined,'error');error.setAttribute('role','alert');if(value.blocked.length){error.textContent=value.blocked.join(' ');remove.disabled=true;}else dialog.append(el('p','Diese Löschung gibt den Speicherplatz frei und kann nicht rückgängig gemacht werden.','small-note'));footer.append(cancel,remove);dialog.append(error,footer);document.body.append(dialog);dialog.showModal();}catch(e){message(e);}}
-function syncWorkspaceShell(){const header=$('main>header');if(!header)return;let description=$('#page-description');if(!description){description=el('p');description.id='page-description';$('#title').after(description);}description.textContent=({projects:'Websites, Laufzeiten und Sicherungen an einem Ort.',extensions:'Pakete und Updatequellen für Joomla und WordPress.',versions:'Installationspakete entdecken, speichern und verwalten.',backups:'Gespeicherte Archive und Projektsicherungen verwalten.',activity:'Vorgänge, Ergebnisse und technische Details.',system:'Installation, Infrastruktur und Speicherorte.'})[view]||'';const add=$('#source-new');if(add.parentElement!==header)header.append(add);add.hidden=view!=='extensions';}
+function syncWorkspaceShell(){const header=$('main>header');if(!header)return;$('#page-description')?.remove();const add=$('#source-new');if(add.parentElement!==header)header.append(add);add.hidden=view!=='extensions';}
 statuses.running='Aktiv';statuses.stopped='Startbereit';
 const baseApi=api;
 api=async function(path,body){const value=await baseApi(path,body);if(body!==undefined)workspaceState.dirty=true;return value;};
@@ -31,9 +144,41 @@ renderProject=function(slug){if(projectRendered!==slug){projectTab='overview';pr
  if(projectTab==='settings'){const panel=workspacePanel('Laufzeit'),label=el('label','PHP-Version'),select=el('select');phpVersions.forEach(v=>option(select,v,'PHP '+v));select.value=p.php;label.append(select);const apply=button('Änderung übernehmen',()=>api('projects/'+slug+'/runtime',{php:select.value}));apply.disabled=jobActive(slug)||p.storage==='legacy';panel.append(label,apply);const danger=workspacePanel('Projekt entfernen','Dateien und Datenbankexport werden wie bisher im lokalen Papierkorb aufbewahrt.');const remove=localButton('Projekt löschen',()=>{const f=$('#delete-project-form');f.reset();f.dataset.project=slug;f.elements.confirm.placeholder=slug;$('#delete-project').showModal();},'danger');remove.disabled=jobActive(slug);danger.append(remove);box.append(panel,danger);return;}
  const grid=el('div',undefined,'workspace-grid workspace-overview'),site=workspacePanel('Website'),maintenance=workspacePanel('Updates & Sicherungen');site.append(workspaceFacts([['Domain',slug+'.vmm.test'],['CMS',cmsLabel(p.cms)+' '+(p.version||'')],['Laufzeit','PHP '+p.php],['Status',workspaceBadge(statuses[p.status]||p.status,p.status)]]));const links=el('div',undefined,'extra-actions');for(const [url,label] of [[p.frontend_url,'Frontend ↗'],[p.backend_url,'Backend ↗'],[p.database_url,'phpMyAdmin ↗'],[p.https_url,'HTTPS ↗'],...(p.restore?[[p.admin_url,'Wiederherstellung ↗']]:[])])if(url)links.append(projectLink(url,label));links.append(folderButton(p));site.append(links);maintenance.append(el('p',p.extension_status?updateSummary(p.extension_status):'Updates noch nicht geprüft.'));const actions=el('div',undefined,'extra-actions');actions.append(button('Updates prüfen',()=>api('projects/'+slug+'/updates',{})),localButton('Backups ansehen',()=>{projectTab='backups';renderProject(slug);},'primary'));maintenance.append(actions,localButton('Zugänge anzeigen',()=>{projectTab='credentials';renderProject(slug);}));if(p.restore){maintenance.append(el('p','Wiederherstellung noch nicht abgeschlossen.','small-note'),localButton('Wiederherstellung fortsetzen',()=>openRetry(p)));}if(p.error)maintenance.append(el('p',p.error,'error'));grid.append(site,maintenance);box.append(grid);};
 
-renderManagerUpdate=async function(){const data=await api('manager-update'),box=$('#manager-update'),notice=$('#update-notice'),installation=data.installation;updateInstalling=!!installation&&['queued','running'].includes(installation.status)&&!installation.historical;renderUpdateProgress(updateInstalling?installation:null);if(unchanged(box,[data.current,data.latest,data.checked,data.error,data.available,installation,jobActive('manager-update')]))return;box.replaceChildren();const grid=el('div',undefined,'workspace-grid workspace-overview'),current=workspacePanel('Manager-Version'),history=workspacePanel('Updateverlauf');current.append(workspaceFacts([['Installiert',data.current],['Verfügbar',data.latest||'Noch nicht geprüft'],['Zustand',workspaceBadge(updateInstalling?'Update läuft':data.available?'Update verfügbar':'Aktuell',updateInstalling?'running':data.available?'queued':'done')]]));current.append(projectLink(data.source,'GitHub-Releases ↗'));if(data.error)current.append(el('p',data.error,'error'));if(data.available&&!data.error){const install=button(updateInstalling?'Update läuft …':'Update '+data.latest+' installieren',async()=>{await api('manager-update/install',{version:data.latest});updateInstalling=true;});install.classList.add('primary');install.disabled=updateInstalling||jobActive('manager-update');current.append(install);notice.hidden=false;const link=el('a','Update öffnen');link.href='#system/updates';notice.replaceChildren(el('span','Manager-Update '+data.latest+' verfügbar. '),link);}else notice.hidden=true;if(installation){if(updateInstalling)history.append(el('p',installation.message));else{const details=el('details');details.append(el('summary',installation.status==='done'?'Letzte abgeschlossene Aktualisierung':'Früheren Updateversuch anzeigen'));details.append(el('p',installation.message||'Kein weiterer Status.'));if(installation.version)details.append(el('p','Zielversion: '+installation.version,'small-note'));if(installation.diagnostics)details.append(el('pre',installation.diagnostics,'update-log'));if(installation.log)details.append(el('pre',installation.log,'update-log'));history.append(details);history.append(el('p','Historische Einträge beschreiben frühere Versuche. Der aktuelle Installationszustand steht links.','small-note'));}}else empty(history,'Noch kein Updateversuch aufgezeichnet.');if(data.checked)history.append(el('p','Letzte Prüfung: '+new Date(data.checked*1000).toLocaleString('de-DE'),'small-note'));grid.append(current,history);box.append(grid);};
+let managerNotesVersion='',managerNotes='';
+renderManagerUpdate=async function(){
+    const data=await api('manager-update'),box=$('#manager-update'),notice=$('#update-notice');
+    const installation=data.installation;
+    updateInstalling=!!installation&&['queued','running'].includes(installation.status);
+    renderUpdateProgress(updateInstalling?installation:null);
+    if(view==='system'&&location.hash.endsWith('/updates')&&managerNotesVersion!==data.current){
+        try{managerNotes=(await api('manager-changelog')).notes;managerNotesVersion=data.current;}
+        catch(error){managerNotes='Änderungsprotokoll konnte nicht geladen werden.';}
+    }
+    if(!unchanged(box,[data.current,data.latest,data.available,data.error,updateInstalling,jobActive('manager-update'),managerNotes])){
+        box.replaceChildren(workspaceFacts([['Installiert',data.current],['Verfügbar',data.latest||'—']]));
+        if(data.error)box.append(el('p',data.error,'error'));
+        if(data.available&&!data.error){
+            const install=button('Update '+data.latest+' installieren',async()=>{
+                await api('manager-update/install',{version:data.latest});updateInstalling=true;
+            },'primary');
+            install.disabled=updateInstalling||jobActive('manager-update');box.append(install);
+        }
+        if(managerNotes){
+            const notes=el('section');notes.append(el('h3','Änderungsprotokoll · '+data.current));
+            for(const line of managerNotes.split('\n').map(line=>line.trim()).filter(Boolean)){
+                if(line.startsWith('# Website Manager '))continue;
+                notes.append(el(line.startsWith('### ')?'h4':'p',line.replace(/^### /,'')));
+            }
+            box.append(notes);
+        }
+    }
+    notice.hidden=!data.available||!!data.error;
+    if(!notice.hidden){
+        const link=el('a','Update '+data.latest+' verfügbar');link.href='#system/updates';notice.replaceChildren(link);
+    }
+};
 
-refresh=async function(force=false){if(document.hidden&&!force&&workspaceState.ready&&!workspaceState.dirty)return;if(busy){workspaceState.pending=true;workspaceState.pendingForce=workspaceState.pendingForce||force;return;}busy=true;try{const all=!workspaceState.ready||workspaceState.dirty;workspaceState.dirty=false;const needed=new Set(all?['projects','packages','extensions','backups','jobs']:({projects:['projects','jobs',...(['extensions','licenses'].includes(projectTab)?['extensions']:[])],extensions:['projects','extensions','jobs'],versions:['packages','jobs'],backups:['backups','jobs'],activity:['jobs'],system:['jobs']})[view]||['jobs']);const results=await Promise.all([...needed].map(async key=>[key,await api(key)]));for(const [key,data] of results){if(key==='projects'){projects=data.projects;phpVersions=data.php;}if(key==='packages'){packages=data.packages;releases=data.releases;}if(key==='extensions'){extensions=data.extensions;licenses=data.licenses;assignments=data.assignments;extensionSources=data.sources||[];providerRecords=data.providers||[];extensionPlans=data.plans||[];}if(key==='backups')backups=data.backups;if(key==='jobs')jobs=data.jobs;}workspaceState.ready=true;syncJobToasts();renderJobs();if(view==='activity')await loadActivity();if(view==='projects'){const slug=location.hash.split('/')[1];if(!slug)renderProjects();else{const p=projects.find(p=>p.slug===slug);if(!p&&!jobs.some(j=>j.resource===slug&&['queued','running'].includes(j.status)))location.hash='#projects';else if(!$('#project-view input:focus, #project-view select:focus')&&projectSnapshot!==projectState(slug))renderProject(slug);else renderProjectJobs(slug);}}if(view==='extensions'&&!$('#extensions input:focus')&&!$('#extensions select:focus'))renderExtensions();if(view==='versions')renderPackages();if(view==='backups')await renderBackups();if(storageApplying&&view!=='system')await renderStorage();if(view==='system'){const tab=location.hash.split('/')[1]||'runtimes';if(tab==='runtimes')await renderRuntimes();if(tab==='updates')await renderManagerUpdate();if(tab==='akeeba')await loadKickstart();if(tab==='infrastructure')await renderEnvironment();if(tab==='storage')await renderStorage();}syncWorkspaceShell();}catch(e){workspaceState.dirty=true;message(updateInstalling?'Manager wird aktualisiert. Verbindung wird wiederhergestellt …':storageApplying?'Speicherorte werden umgestellt. Verbindung wird wiederhergestellt …':e);}finally{busy=false;if(workspaceState.pending){workspaceState.pending=false;const forceNext=workspaceState.pendingForce;workspaceState.pendingForce=false;queueMicrotask(()=>refresh(forceNext));}}};
+refresh=async function(force=false){if(document.hidden&&!force&&workspaceState.ready&&!workspaceState.dirty)return;if(busy){workspaceState.pending=true;workspaceState.pendingForce=workspaceState.pendingForce||force;return;}busy=true;try{const all=!workspaceState.ready||workspaceState.dirty;workspaceState.dirty=false;const needed=new Set(all?['projects','packages','extensions','backups','jobs']:({projects:['projects','jobs',...(['extensions','licenses'].includes(projectTab)?['extensions']:[])],extensions:['projects','extensions','jobs'],versions:['packages','jobs'],backups:['backups','jobs'],activity:['jobs'],system:['jobs']})[view]||['jobs']);const results=await Promise.all([...needed].map(async key=>[key,await api(key)]));for(const [key,data] of results){if(key==='projects'){projects=data.projects;phpVersions=data.php;}if(key==='packages'){packages=data.packages;releases=data.releases;}if(key==='extensions'){extensions=data.extensions;licenses=data.licenses;assignments=data.assignments;extensionSources=data.sources||[];providerRecords=data.providers||[];extensionPlans=data.plans||[];}if(key==='backups')backups=data.backups;if(key==='jobs')jobs=data.jobs;}workspaceState.ready=true;syncJobToasts();renderJobs();if(view==='activity')await loadActivity();if(view==='projects'){const slug=location.hash.split('/')[1];if(!slug)renderProjects();else{const p=projects.find(p=>p.slug===slug);if(!p&&!jobs.some(j=>j.resource===slug&&['queued','running'].includes(j.status)))location.hash='#projects';else if(!$('#project-view input:focus, #project-view select:focus')&&projectSnapshot!==projectState(slug))renderProject(slug);else renderProjectJobs(slug);}}if(view==='extensions'&&!$('#extensions input:focus')&&!$('#extensions select:focus'))renderExtensions();if(view==='versions')renderPackages();if(view==='backups')await renderBackups();if(storageApplying&&view!=='system')await renderStorage();if(view==='system'){const tab=location.hash.split('/')[1]||tabDefaults.system;if(tab==='runtimes')await renderRuntimes();if(tab==='updates')await renderManagerUpdate();if(tab==='akeeba')await loadKickstart();if(tab==='infrastructure')await renderEnvironment();if(tab==='storage')await renderStorage();}syncWorkspaceShell();}catch(e){workspaceState.dirty=true;message(updateInstalling?'Manager wird aktualisiert. Verbindung wird wiederhergestellt …':storageApplying?'Speicherorte werden umgestellt. Verbindung wird wiederhergestellt …':e);}finally{busy=false;if(workspaceState.pending){workspaceState.pending=false;const forceNext=workspaceState.pendingForce;workspaceState.pendingForce=false;queueMicrotask(()=>refresh(forceNext));}}};
 route=async function(){let [next,tab]=location.hash.replace(/^#\/?/,'').split('/');if(!titles[next])next='projects';view=next;document.querySelectorAll('aside nav button').forEach(n=>{const active=n.dataset.view===view;n.classList.toggle('active',active);if(active)n.setAttribute('aria-current','page');else n.removeAttribute('aria-current');});document.querySelectorAll('.view').forEach(n=>n.hidden=n.id!==view+'-view');$('#title').textContent=titles[view][0];$('#new').hidden=view!=='projects';if(tabDefaults[view])activateTab(view,tab||tabDefaults[view]);syncWorkspaceShell();if(view==='system'&&tab==='database'){const values=await api('system-credentials');$('#system-credentials').replaceChildren(...Object.entries(values).map(([key,value])=>{const label=el('label',key),field=copyField(value,key);if(/passwort|password/i.test(key))field.querySelector('input').type='password';label.append(field);return label;}));}if(view==='system'&&(tab==='infrastructure'||!tab)){const h=await api('health');$('#health').replaceChildren(el('p',h.docker?'● Docker erreichbar':'○ Docker nicht erreichbar'),el('p',h.kickstart?'● Akeeba Kickstart vorhanden':'Kickstart wird beim Import geladen'));const ports=$('#ports');ports.replaceChildren();for(const php of phpVersions)ports.append(el('p','PHP '+php+' · HTTP 80'+php.replace('.','')+' · HTTPS 81'+php.replace('.','')));}await refresh(true);if(view==='projects')renderProjects();window.scrollTo({top:0,behavior:'instant'});};
 const baseOpenCreate=openCreate;
 openCreate=async function(){try{const [p,b]=await Promise.all([api('packages'),api('backups')]);packages=p.packages;backups=b.backups;baseOpenCreate();}catch(e){message(e);}};

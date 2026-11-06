@@ -128,7 +128,11 @@ def describe(c,kind,ident):
     if kind in ('backup','export'):
         from verification_service import result
         verification=result(kind,ident)
-    return {'backup_purpose':('live' if info.get('project') else 'import') if kind=='backup' else ('snapshot' if kind=='export' else None),'source_project':info.get('project') if kind=='backup' else None,'verification':verification,'kind':kind,'id':ident,'label':LABELS[kind],'name':name,'cms':cms,'size':None if kind=='trash' else sum(size(p) for p in paths),'files':len(paths),'projects':references,'note':note,'status':info.get('status') if kind=='backup' else None,'archive_files':info.get('files',[]) if kind=='backup' and info.get('status') in ('complete','unverified') else [],'blocked':list(dict.fromkeys(blocked)),'_paths':paths}
+    created=info.get('created') if kind=='backup' else None
+    if not created and kind in ('backup','export') and paths:
+        entries=[f for path in paths for f in (list(path.iterdir()) if path.is_dir() else [path]) if f.is_file() and f.suffix.lower() in ('.zip','.jpa','.jps')]
+        created=int(min((f.stat().st_mtime for f in entries),default=paths[0].stat().st_mtime))
+    return {'created':created,'backup_purpose':('live' if info.get('project') else 'import') if kind=='backup' else ('snapshot' if kind=='export' else None),'source_project':info.get('project') if kind=='backup' else None,'verification':verification,'kind':kind,'id':ident,'label':LABELS[kind],'name':name,'cms':cms,'size':None if kind=='trash' else sum(size(p) for p in paths),'files':len(paths),'projects':references,'note':note,'status':info.get('status') if kind=='backup' else None,'archive_files':info.get('files',[]) if kind=='backup' and info.get('status') in ('complete','unverified') else [],'blocked':list(dict.fromkeys(blocked)),'_paths':paths}
 
 
 def public(value):return {k:v for k,v in value.items() if not k.startswith('_')}

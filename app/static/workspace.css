@@ -59,3 +59,24 @@
 /* Keep diagnostics inside the panel and lifecycle actions on one line. */
 #system-services>div{min-width:0}#system-services .project-table-scroll{max-width:100%;min-width:0}#system-services .workspace-table{width:100%;table-layout:fixed}#system-services .workspace-table th:nth-child(1){width:24%}#system-services .workspace-table th:nth-child(2){width:15%}#system-service-list .workspace-table th:last-child{width:116px}#system-permission-list .workspace-table th:last-child{width:61%}#system-services .workspace-table td:first-child{min-width:0}#system-services .workspace-table td:last-child{white-space:normal}#system-services .service-actions{display:flex;flex-wrap:nowrap;gap:8px}.icon-play-fill{mask-image:url('/assets/bootstrap-icons/play-fill.svg');-webkit-mask-image:url('/assets/bootstrap-icons/play-fill.svg')}.icon-stop-fill{mask-image:url('/assets/bootstrap-icons/stop-fill.svg');-webkit-mask-image:url('/assets/bootstrap-icons/stop-fill.svg')}
 #files-view .toolbar{display:flex;flex-wrap:nowrap;align-items:center;gap:12px;margin:18px 0}#files-view .toolbar input{flex:1;max-width:none;margin:0}#files-view .toolbar>button{flex:0 0 auto}#files-view #file-list{min-width:0}#files-view .project-table-scroll{max-width:100%}#files-view .file-row-actions{display:flex;flex-wrap:nowrap!important;align-items:center;gap:8px;white-space:nowrap}#files-view .workspace-table td:last-child{width:1%;white-space:nowrap}#system-panel-deletion form{max-width:720px}#system-panel-deletion fieldset{border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:20px}#system-panel-deletion fieldset label{margin:10px 0}#files-view .workspace-table small{display:block}
+
+.managed-table { min-width: 0; }
+.managed-table > input[type="search"] { width: min(100%, 26rem); margin-block: .5rem; }
+.table-legend, .table-pages { display: flex; align-items: center; flex-wrap: wrap; gap: .65rem; margin-block: .65rem; }
+.table-legend span { display: inline-flex; align-items: center; gap: .35rem; font-size: .8rem; }
+.table-pages { justify-content: flex-end; }
+.table-pages [aria-current="page"] { border-color: currentColor; font-weight: 700; }
+.managed-table td[data-label="Aktionen"], .managed-table td[data-label="Aktion"] { width: 1%; white-space: nowrap; }
+.managed-table td .extra-actions { display: flex; align-items: center; flex-wrap: nowrap; }
+.managed-table td .extra-actions > * { flex: 0 0 auto; }
+.managed-table td .icon-action { flex: 0 0 auto; }
+.section-title-actions { display: flex; align-items: center; gap: .7rem; margin-bottom: 1rem; }
+.section-title-actions h2 { margin: 0; }
+#storage-areas td[data-label="Pfad"] input { min-width: 14rem; width: 100%; }
+#storage-areas td[data-label="Größe"] { white-space: nowrap; }
+#versions-view > .subtabs, #backups-view > .subtabs { margin-bottom: .8rem; }
+#versions-view > form:not([hidden]) { display: flex; flex-wrap: wrap; align-items: end; gap: .8rem; }
+#jobs td pre { max-width: min(55vw, 44rem); max-height: 18rem; overflow: auto; white-space: pre-wrap; }
+.workspace-layout .managed-table .workspace-table td .extra-actions { flex-wrap: nowrap; }
+.activity-summary { display: inline-flex; cursor: pointer; list-style: none; }
+.activity-summary::-webkit-details-marker { display: none; }

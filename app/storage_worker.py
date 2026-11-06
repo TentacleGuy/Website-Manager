@@ -41,6 +41,15 @@ def probe(plan):
     for key in plan['changed']:
         source=Path('/sources')/key;target=Path('/targets')/key
         if target.is_symlink() or not target.is_dir():raise ValueError(key+': Ziel ist kein regulärer Ordner.')
+        if plan.get('switch_only'):
+            test=target/('.vmm-write-test-'+plan['id'])
+            try:
+                with test.open('xb') as stream:stream.write(b'vmm')
+                test.unlink()
+            except OSError:
+                raise ValueError(key+': Zielordner ist nicht beschreibbar.') from None
+            result.append({'key':key,'free':shutil.disk_usage(target).free,'writable':True})
+            continue
         if any(target.iterdir()):raise ValueError(key+': Der Zielordner muss leer sein.')
         size=sum(p.stat().st_size for p in source.rglob('*') if p.is_file() and not p.is_symlink()) if source.exists() else 0
         free=shutil.disk_usage(target).free
@@ -120,13 +129,14 @@ def apply(plan):
                 verify_runtime_owner(containers,plan['current']['projects'])
                 command(['docker','compose','-f',str(shared),'stop',*php]);php_stopped=True
         command(compose+['stop','manager']);stopped=True
-        report('running','Daten kopieren und mit Prüfsummen vergleichen …')
-        for key in plan['changed']:
-            source=Path('/sources')/key;target=Path('/targets')/key
-            expected=inventory(source)
-            shutil.copytree(source,target,symlinks=True,dirs_exist_ok=True)
-            if inventory(target)!=expected or inventory(source)!=expected:raise ValueError(key+': Die Kopie stimmt nicht vollständig mit dem Original überein.')
-        # Commit only after every area has passed verification.
+        if not plan.get('switch_only'):
+            report('running','Daten kopieren und mit Prüfsummen vergleichen …')
+            for key in plan['changed']:
+                source=Path('/sources')/key;target=Path('/targets')/key
+                expected=inventory(source)
+                shutil.copytree(source,target,symlinks=True,dirs_exist_ok=True)
+                if inventory(target)!=expected or inventory(source)!=expected:raise ValueError(key+': Die Kopie stimmt nicht vollständig mit dem Original überein.')
+            # Commit only after every area has passed verification.
         atomic(saved,json.dumps(plan['paths'],indent=2))
         atomic(root/'.env',env_paths(previous_env.decode(),plan['paths'],plan['env_keys']))
         atomic(override,json.dumps({'services':{'manager':{'volumes':plan['new_volumes']}}},indent=2))
@@ -151,7 +161,7 @@ def apply(plan):
             if response.returncode==0:healthy=True;break
             time.sleep(2)
         if not healthy:raise RuntimeError('Der Manager antwortet nach der Umstellung nicht.')
-        report('done','Speicherorte umgestellt. Kopien geprüft; bisherige Ordner bleiben als Rückfallmöglichkeit erhalten.')
+        report('done','Speicherpfade aktiviert.' if plan.get('switch_only') else 'Speicherorte umgestellt. Kopien geprüft.')
     except Exception as e:
         for file,old in ((saved,previous_settings),(override,previous_override),(root/'.env',previous_env),(shared,previous_shared)):
             if old is None:file.unlink(missing_ok=True)

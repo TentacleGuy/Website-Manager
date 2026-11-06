@@ -6,6 +6,23 @@ Alle wesentlichen Änderungen am Website Manager werden hier dokumentiert. Neue 
 
 Noch keine Änderungen.
 
+## [2.0.6] - 2026-11-06
+
+### Verbessert
+
+- Beim Theme-Wechsel tauscht der Oktopus in der Seitenleiste seine Schlafmütze gegen eine Sonnenbrille und umgekehrt.
+
+- Tabellen haben eine gemeinsame Suche, sortierbare Spalten, Symbolaktionen mit Legende und 20 Einträge pro Seite. Datumsangaben erscheinen als TT.MM.JJJJ und Uhrzeiten als HH:MM.
+- Das CMS-Archiv zeigt Mindestanforderungen für PHP und Datenbank sowie Löschaktionen für gespeicherte Pakete. Der Upload hat einen eigenen Reiter mit Versionsfeld und CMS-Auswahl.
+- Backups und Erweiterungen werden in Tabellen mit Reitern angezeigt. Globale Erweiterungsschlüssel lassen sich direkt aus der Zeile bearbeiten.
+- Das Activity Log zeigt Projekt, Datum, Art und Status in Spalten. Das technische Updateprotokoll steht in den Meldungsdetails.
+- Die Systemansicht bündelt Speicherorte und Löschregeln sowie Kickstart und Startvideo. Kickstart zeigt verfügbare, gespeicherte und standardmäßig verwendete Versionen. Manager-Updates zeigen das Änderungsprotokoll der installierten Version.
+- Der Dateimanager und der Papierkorb zeigen ihre Aktionen direkt in der Zeile.
+
+### Behoben
+
+- Beim Wechsel eines Speicherpfads bindet der Manager den ausgewählten Ordner ein. Dateien werden weder kopiert noch verschoben.
+
 ## [2.0.5] - 2026-11-05
 
 ### Behoben

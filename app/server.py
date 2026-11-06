@@ -186,7 +186,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200,cleanup_service.inventory())
             if path=='/api/storage':
                 import storage_service
-                return self.send(200,storage_service.status())
+                return self.send(200,storage_service.status(parse_qs(urlparse(self.path).query).get('measure')==['1']))
             akeeba_project=re.fullmatch(r'/api/projects/([a-z][a-z0-9-]{0,39})/akeeba-backups',path)
             if akeeba_project:
                 import akeeba_service
@@ -288,10 +288,13 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200,{'MariaDB-Host':'db','MariaDB-Administrator':'root','MariaDB-Root-Passwort':value.get('root_password','')})
             if path=='/api/kickstart':
                 import kickstart_service
-                return self.send(200,{'versions':kickstart_service.available(),'manual':(DATA/'tools/kickstart.php').is_file()})
+                return self.send(200,kickstart_service.inventory())
             if path=='/api/manager-update/diagnostics':
                 import update_service
                 return self.send(200,update_service.diagnostics())
+            if path=='/api/manager-changelog':
+                import update_service
+                return self.send(200,{'notes':update_service.current_release_notes()})
             if path=='/api/manager-update':
                 import update_service
                 return self.send(200,update_service.status())

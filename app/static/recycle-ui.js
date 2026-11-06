@@ -3,29 +3,29 @@ jobKinds['recycle-restore']='Aus Papierkorb wiederherstellen';jobKinds['recycle-
 actionIcons.set('Wiederherstellen','arrow-counterclockwise');actionIcons.set('Endgültig löschen','trash');actionIcons.set('In Papierkorb verschieben','trash');actionIcons.set('Dateien aktualisieren','arrow-clockwise');
 fileFilter.remove();fileToolbar.replaceChildren(fileSearch,button('Dateien aktualisieren',()=>renderFiles(true)));
 fileSearch.placeholder='Alle Spalten durchsuchen …';fileSearch.setAttribute('aria-label','Alle Dateispalten durchsuchen');
-let recycleItems=[],fileArea='files',fileSortColumn=0,fileSortDirection=1;
+let recycleItems=[],fileArea='files';
 const fileTabs=el('div',undefined,'subtabs');fileTabs.setAttribute('role','tablist');fileTabs.setAttribute('aria-label','Dateibereiche');
 for(const [key,label] of [['files','Alle Dateien'],['trash','Papierkorb']]){const b=localButton(label,()=>{fileArea=key;location.hash=key==='trash'?'#files/trash':'#files';syncFileTabs();drawFiles();});b.dataset.fileArea=key;b.id='files-tab-'+key;b.setAttribute('role','tab');b.setAttribute('aria-controls','file-list');fileTabs.append(b);}
 filesView.prepend(fileTabs);fileList.id='file-list';fileList.setAttribute('role','tabpanel');
 const recycleNotice=el('p',undefined,'small-note');fileToolbar.after(recycleNotice);
-function syncFileTabs(){if(fileArea==='files'&&fileSortColumn>2)fileSortColumn=0;for(const b of fileTabs.children){const selected=b.dataset.fileArea===fileArea;b.setAttribute('aria-selected',String(selected));b.tabIndex=selected?0:-1;}fileList.setAttribute('aria-labelledby','files-tab-'+fileArea);recycleNotice.hidden=fileArea!=='trash';recycleNotice.textContent='Abgelaufene Einträge werden bei laufendem Manager automatisch endgültig gelöscht. Wiederherstellen überschreibt keine inzwischen vorhandenen Dateien.';}
+function syncFileTabs(){for(const b of fileTabs.children){const selected=b.dataset.fileArea===fileArea;b.setAttribute('aria-selected',String(selected));b.tabIndex=selected?0:-1;}fileList.setAttribute('aria-labelledby','files-tab-'+fileArea);recycleNotice.hidden=fileArea!=='trash';recycleNotice.textContent='Abgelaufene Einträge werden bei laufendem Manager automatisch endgültig gelöscht. Wiederherstellen überschreibt keine inzwischen vorhandenen Dateien.';}
 renderFiles=async function(force=false){if(force||view==='files'){const [normal,bin]=await Promise.all([api('cleanup'),api('recycle')]);fileInventory=normal.items.filter(x=>x.kind!=='trash');recycleItems=bin.items;}drawFiles();};
-function fileColumns(item){return fileArea==='trash'?[item.name,item.label,workspaceStorageSize(item.size),new Date(item.deleted*1000).toLocaleString('de-DE'),new Date(item.expires*1000).toLocaleString('de-DE')]:[item.name,item.label,workspaceStorageSize(item.size)];}
 drawFiles=function(){
-    const data=fileArea==='trash'?recycleItems:fileInventory,query=fileSearch.value.trim().toLocaleLowerCase('de');
-    const rows=data.filter(x=>[...fileColumns(x),x.cms||'',x.error||''].join(' ').toLocaleLowerCase('de').includes(query)).sort((a,b)=>{const av=fileSortColumn===2?(a.size||0):fileArea==='trash'&&fileSortColumn===3?a.deleted:fileArea==='trash'&&fileSortColumn===4?a.expires:fileColumns(a)[fileSortColumn]||'',bv=fileSortColumn===2?(b.size||0):fileArea==='trash'&&fileSortColumn===3?b.deleted:fileArea==='trash'&&fileSortColumn===4?b.expires:fileColumns(b)[fileSortColumn]||'';return fileSortDirection*(typeof av==='number'?av-bv:String(av).localeCompare(String(bv),'de',{numeric:true}));});
-    if(unchanged(fileList,[rows,fileArea,query,fileSortColumn,fileSortDirection]))return;
-    const headers=['Datei / Gruppe','Typ','Größe',...(fileArea==='trash'?['Gelöscht am','Endgültige Löschung']:[]),'Aktionen'];
-    if(!rows.length){fileList.replaceChildren(el('p',query?'Keine passenden Dateien.':fileArea==='trash'?'Der Papierkorb ist leer.':'Keine gespeicherten Dateien.','small-note'));return;}
-    const table=workspaceTable(headers,rows.map(item=>{const actions=el('div',undefined,'extra-actions file-row-actions');
-        if(fileArea==='trash'){
-            const restore=localButton('Wiederherstellen',()=>confirmRecycle(item,'restore'));restore.disabled=item.status!=='ready'||item.restorable===false;restore.title=restore.disabled?(item.error||'Dieser Eintrag kann nicht wiederhergestellt werden.'):'Wiederherstellen';
-            actions.append(localButton('Dateien anzeigen',()=>fileDetails({...item,kind:'recycle'})),restore,localButton('Endgültig löschen',()=>confirmRecycle(item,'purge'),'danger'));
-        }else actions.append(localButton('Dateien anzeigen',()=>fileDetails(item)),cleanupButton(item.kind,item.id));
-        const columns=fileColumns(item);if(item.error){const info=el('div');info.append(el('strong',columns[0]),el('small',item.error,'error'));columns[0]=info;}return [...columns,actions];}));
-    [...table.querySelectorAll('thead th')].forEach((th,i)=>{if(i===headers.length-1)return;const b=localButton(headers[i]+(i===fileSortColumn?(fileSortDirection===1?' ↑':' ↓'):''),()=>{fileSortDirection=i===fileSortColumn?-fileSortDirection:1;fileSortColumn=i;drawFiles();});b.className='column-sort';th.replaceChildren(b);th.setAttribute('aria-sort',i===fileSortColumn?(fileSortDirection===1?'ascending':'descending'):'none');});fileList.replaceChildren(table);
+    const trash=fileArea==='trash',items=trash?recycleItems:fileInventory;
+    const headers=['Datei / Gruppe','Typ','Größe',...(trash?['Gelöscht am','Endgültige Löschung']:[]),'Aktionen'];
+    if(unchanged(fileList,[items,fileArea]))return;
+    const rows=items.map(item=>{
+        const actions=el('div',undefined,'extra-actions');
+        if(trash){
+            const restore=localButton('Wiederherstellen',()=>confirmRecycle(item,'restore'));
+            restore.disabled=item.status!=='ready'||item.restorable===false;
+            actions.append(restore,localButton('Endgültig löschen',()=>confirmRecycle(item,'purge'),'danger'));
+        }else actions.append(cleanupButton(item.kind,item.id));
+        return [item.name,item.label,workspaceStorageSize(item.size),...(trash?[managerDate(item.deleted),managerDate(item.expires)]:[]),actions];
+    });
+    const values=items.map(item=>[item.name,item.label,item.size||0,item.deleted,item.expires]);
+    fileList.replaceChildren(workspaceTable(headers,rows,{search:fileSearch,values}));
 };
-fileSearch.oninput=drawFiles;
 async function confirmRecycle(item,action){const d=simpleDialog(action==='restore'?'Wiederherstellen?':'Endgültig löschen?');d.append(el('strong',item.name),el('p',action==='restore'?'Die Datei und ihre Bibliotheksdaten werden wiederhergestellt. Bereits vorhandene Dateien werden nicht überschrieben. Gelöschte Projekte erscheinen gestoppt im Manager.':'Dieser Papierkorbeintrag wird endgültig entfernt und kann danach nicht mehr wiederhergestellt werden.'));
     const error=el('p',undefined,'error'),footer=el('footer'),ok=localButton(action==='restore'?'Wiederherstellen':'Endgültig löschen',async()=>{ok.disabled=true;try{await api('recycle/'+item.id+'/'+action,{});d.close();workspaceState.dirty=true;await refresh(true);}catch(e){error.textContent=e.message;ok.disabled=false;}},action==='purge'?'danger':'primary');ok.dataset.keepText='true';footer.append(localButton('Abbrechen',()=>d.close()),ok);d.append(error,footer);d.showModal();
 }
@@ -41,5 +41,24 @@ async function loadDeletionSettings(){const value=await api('deletion-settings')
     const note=el('p','Die Aufbewahrung läuft ab dem Verschieben. Neue Einstellungen gelten für künftig gelöschte Dateien; vorhandene Einträge behalten ihr angezeigtes Ablaufdatum. Die automatische Bereinigung läuft, solange der Manager läuft. Gelöschte Projekte werden weiterhin zunächst im Projektpapierkorb gesichert.','small-note'),status=el('p'),save=el('button','Einstellungen speichern','primary');save.type='submit';form.append(group,label,note,status,save);update();
     form.onsubmit=async e=>{e.preventDefault();save.disabled=true;try{const result=await api('deletion-settings',{mode:form.querySelector('input[name="mode"]:checked').value,days:Number(days.value)});status.textContent=result.message;}catch(e){status.textContent=e.message;status.className='error';}finally{save.disabled=false;}};panel.append(form);deletionPanel.replaceChildren(panel);
 }
-const routeBeforeRecycle=route;route=async function(){fileArea=location.hash==='#files/trash'?'trash':'files';syncFileTabs();if(location.hash==='#system/deletion'){deletionFormLoaded=false;deletionPanel.replaceChildren(el('p','Einstellungen werden geladen …'));}await routeBeforeRecycle();if(view==='system'&&location.hash.endsWith('/deletion'))await loadDeletionSettings();};
+const routeBeforeRecycle=route;
+route=async function(){
+    const aliases={'#system/runtimes':'#system/infrastructure','#system/deletion':'#system/storage','#system/splash':'#system/akeeba'};
+    if(aliases[location.hash])history.replaceState(null,'',aliases[location.hash]);
+    fileArea=location.hash==='#files/trash'?'trash':'files';
+    syncFileTabs();
+    await routeBeforeRecycle();
+    if(view==='system'&&location.hash.endsWith('/storage'))await loadDeletionSettings();
+};
+deletionTab.remove();
+delete deletionPanel.dataset.panelGroup;
+delete deletionPanel.dataset.panel;
+deletionPanel.removeAttribute('role');
+deletionPanel.removeAttribute('aria-labelledby');
+deletionPanel.hidden=false;
+$('#system-panel-storage').append(deletionPanel);
+$('#system-tab-storage').textContent='Speicher';
+$('#system-tab-akeeba').textContent='System';
+$('#system-tab-runtimes').remove();
+tabDefaults.system='infrastructure';
 syncFileTabs();

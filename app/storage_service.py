@@ -37,7 +37,7 @@ def measure_usage():
     finally:_USAGE_BUSY.clear()
 
 
-def status():
+def status(refresh=False):
     base=config_env('HOST_DATA',str(DATA));saved=settings();areas=[];stale=False
     for key,label in AREAS.items():
         path=DATA/key;path.mkdir(exist_ok=True)
@@ -45,7 +45,7 @@ def status():
         usage=shutil.disk_usage(path)
         areas.append({'key':key,'label':label,'path':saved.get(key,base.rstrip('/')+'/'+key),'default':base.rstrip('/')+'/'+key,'used':cached[1] if cached else None,'free':usage.free})
     with _USAGE_LOCK:
-        if stale and not _USAGE_BUSY.is_set():
+        if (stale or refresh) and not _USAGE_BUSY.is_set():
             _USAGE_BUSY.set();threading.Thread(target=measure_usage,daemon=True).start()
     return {'areas':areas,'migration':migration_status(),'measuring':_USAGE_BUSY.is_set(),'database':'Datenbanken bleiben in ihren bisherigen Docker-Volumes. Zugangsdaten, Zertifikate und Manager-Metadaten bleiben im Manager-Datenordner.'}
 
@@ -67,17 +67,15 @@ def prepare(paths):
     old_targets={m['target']:m for m in current_volumes}
     new_targets=dict(old_targets)
     for key in AREAS:new_targets['/data/'+key]={'type':'bind','source':host_path(paths[key]),'target':'/data/'+key}
-    return {'id':secrets.token_hex(12),'paths':paths,'current':current,'changed':changed,'host_paths':{key:host_path(value) for key,value in paths.items()},'env_keys':ENV_KEYS,'compose_project':labels['com.docker.compose.project'],'host_data':host_data,'host_root':root,'image':own['Image'],'socket':next(m['Source'] for m in own['Mounts'] if m['Destination']=='/var/run/docker.sock'),'current_volumes':current_volumes,'new_volumes':list(new_targets.values())}
+    return {'switch_only':True,'id':secrets.token_hex(12),'paths':paths,'current':current,'changed':changed,'host_paths':{key:host_path(value) for key,value in paths.items()},'env_keys':ENV_KEYS,'compose_project':labels['com.docker.compose.project'],'host_data':host_data,'host_root':root,'image':own['Image'],'socket':next(m['Source'] for m in own['Mounts'] if m['Destination']=='/var/run/docker.sock'),'current_volumes':current_volumes,'new_volumes':list(new_targets.values())}
 
 
 def helper_args(plan,mode):
-    from runtime import host_path
     args=['docker','run','--rm']
     if mode=='apply':args+=['-d','--name','tentacle-storage-'+plan['id'],'--label','vmm.manager.storage=true']
     args+=['--mount','type=bind,source='+plan['host_data']+',target=/vmm-data', '--mount','type=bind,source='+plan['host_root']+',target=/installation', '--mount','type=bind,source='+plan['socket']+',target=/var/run/docker.sock']
     for key in plan['changed']:
-        # -v creates new host directories; the helper rejects nonempty destinations.
-        args+=['-v',host_path(plan['current'][key])+':/sources/'+key+':ro','-v',plan['host_paths'][key]+':/targets/'+key]
+        args+=['--mount','type=bind,source='+plan['host_paths'][key]+',target=/targets/'+key]
     args+=[plan['image'],'python','/vmm-data/storage/jobs/'+plan['id']+'/worker.py',mode,'/vmm-data/storage/jobs/'+plan['id']+'/plan.json']
     return args
 
@@ -94,7 +92,7 @@ def check(paths):
     if busy():raise ValueError('Eine Speicherort-Umstellung läuft bereits.')
     plan=prepare(paths);stage(plan)
     result=json.loads(op.command(helper_args(plan,'probe'),timeout=180))
-    return {**result,'paths':plan['paths'],'message':'Zielordner sind leer, beschreibbar und haben ausreichend freien Speicher.'}
+    return {**result,'paths':plan['paths'],'message':'Zielordner sind beschreibbar. Beim Wechsel werden die dort vorhandenen Dateien verwendet.'}
 
 
 def start(paths):
