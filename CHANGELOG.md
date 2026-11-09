@@ -6,6 +6,18 @@ Alle wesentlichen Änderungen am Website Manager werden hier dokumentiert. Neue 
 
 Noch keine Änderungen.
 
+## [2.0.7] - 2026-11-09
+
+### Verbessert
+
+- Der größere Theme-Schalter sitzt oben in der Seitenleiste. Die CMS-Auswahl verwendet einen Schiebeschalter. Dialoge haben oben rechts einen Schließen-Button. Aktualisieren-Buttons für Archiv, Dateimanager und System stehen an den Überschriften.
+
+### Behoben
+
+- „Projekt erstellen“ hat ein eigenes Symbol für den Projektimport.
+
+- Die Tabellenlegende zeigt die Mülltonne einmal mit dem Text „Löschen“.
+
 ## [2.0.6] - 2026-11-06
 
 ### Verbessert

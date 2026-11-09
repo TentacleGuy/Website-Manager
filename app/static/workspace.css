@@ -80,3 +80,22 @@
 .workspace-layout .managed-table .workspace-table td .extra-actions { flex-wrap: nowrap; }
 .activity-summary { display: inline-flex; cursor: pointer; list-style: none; }
 .activity-summary::-webkit-details-marker { display: none; }
+
+.heading-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.heading-actions>h2{margin:0}
+.heading-actions>[hidden]{display:none}
+.cms-switch{display:inline-flex;align-items:center;gap:9px;width:max-content;white-space:nowrap}
+.cms-switch input[role="switch"]{
+    appearance:none;position:relative;width:42px;height:24px;margin:0;padding:0;
+    border:1px solid var(--line);border-radius:20px;background:var(--hover);cursor:pointer;
+}
+.cms-switch input[role="switch"]::before{
+    content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;
+    border-radius:50%;background:var(--accent-text);
+}
+.cms-switch input[role="switch"]:checked::before{transform:translateX(18px)}
+.cms-archive-controls,.cms-switch{margin-bottom:12px}
+#package-form .cms-switch,.cms-archive-controls .cms-switch{margin-bottom:0}
+dialog:has(>.dialog-close){position:fixed}
+dialog:has(>.dialog-close)>h2,dialog:has(>.dialog-close)>form>h2{padding-inline-end:30px}
+dialog>.dialog-close{position:absolute;inset-block-start:10px;inset-inline-end:10px}

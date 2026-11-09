@@ -17,7 +17,7 @@ for(const [label,icon] of Object.entries({
     'Livesite-Backup erstellen':'cloud-plus',
     'Livesite-Backup herunterladen':'cloud-arrow-down',
     'Neuestes Livesite-Backup herunterladen':'cloud-arrow-down',
-    'Projekt erstellen':'person-plus',
+    'Projekt erstellen':'cloud-plus',
     'Globaler Schlüssel':'key',
     'Erweiterung entfernen':'trash',
     'In Projekt installieren':'box-arrow-in-right',

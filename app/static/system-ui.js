@@ -7,8 +7,17 @@ $('#system-tab-infrastructure').textContent='Dienste';
 const servicePanel=workspacePanel('Dienste und Berechtigungen');
 servicePanel.id='system-services';
 const serviceToolbar=el('div',undefined,'extra-actions');
+actionIcons.set('Dienste und Rechte prüfen','arrow-clockwise');
+actionIcons.set('Alle Versionen abrufen','arrow-clockwise');
 const servicesCheck=localButton('Dienste und Rechte prüfen',()=>checkSystemServices());
-serviceToolbar.append(servicesCheck);
+serviceToolbar.classList.add('heading-actions');
+serviceToolbar.append(servicePanel.querySelector('h2'),servicesCheck);
+const kickstartReload=$('#kickstart-sync'),kickstartTitle=kickstartReload.parentElement.querySelector('h2');
+if(kickstartTitle){
+    const heading=el('div',undefined,'heading-actions');
+    kickstartTitle.before(heading);
+    heading.append(kickstartTitle,kickstartReload);
+}
 const serviceTime=el('p',undefined,'small-note'),serviceList=el('div'),permissionList=el('div'),desktopPanel=workspacePanel('Ordner öffnen und Freigaben');
 serviceList.id='system-service-list';permissionList.id='system-permission-list';
 servicePanel.append(serviceToolbar,serviceTime,serviceList);

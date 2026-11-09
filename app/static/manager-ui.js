@@ -23,6 +23,10 @@ const projectRenderBeforeLists=renderProject;renderProject=function(slug){projec
 const archiveUploadForm=$('#package-form');
 const archiveList=el('div'),archiveTabs=el('div',undefined,'subtabs');
 const archiveSync=$('#sync');
+const pageHeading=$('#title').parentElement;
+archiveSync.hidden=true;
+pageHeading.append(archiveSync);
+const archiveControls=el('div',undefined,'heading-actions cms-archive-controls');
 const archiveCatalog=$('#catalog-cms');
 let archiveUploading=false;
 function viewTabs(container,choices,selected,select){
@@ -32,16 +36,21 @@ function viewTabs(container,choices,selected,select){
         tab.setAttribute('role','tab');tab.setAttribute('aria-selected',String(key===selected));return tab;
     }));
 }
-$('#versions-view').replaceChildren(archiveTabs,archiveUploadForm,archiveCatalog,archiveSync,archiveList);
-const cmsField=archiveUploadForm.elements.cms;
-cmsField.hidden=true;
-const uploadCms=el('div',undefined,'subtabs');
-cmsField.closest('label').after(uploadCms);
-function showUploadCms(cms){
-    cmsField.value=cms;
-    viewTabs(uploadCms,[['wordpress','WordPress'],['joomla','Joomla']],cms,showUploadCms);
+function cmsSwitch(selected,onChange){
+    const label=el('label',undefined,'cms-switch');
+    const input=el('input');
+    input.type='checkbox';input.setAttribute('role','switch');
+    input.setAttribute('aria-label','Joomla statt WordPress auswählen');
+    input.checked=selected==='joomla';
+    input.onchange=()=>onChange(input.checked?'joomla':'wordpress');
+    label.append(el('span','WordPress'),input,el('span','Joomla'));
+    return label;
 }
-showUploadCms(cmsField.value);
+$('#versions-view').replaceChildren(archiveTabs,archiveControls,archiveUploadForm,archiveCatalog,archiveList);
+const cmsField=archiveUploadForm.elements.cms;
+cmsField.closest('label').hidden=true;
+cmsField.closest('label').after(cmsSwitch(cmsField.value,cms=>{cmsField.value=cms;}));
+archiveControls.append(cmsSwitch(archiveCMS,cms=>{archiveCMS=cms;renderPackages();}));
 archiveUploadForm.onsubmit=e=>{
     e.preventDefault();
     act(async()=>{
@@ -68,14 +77,14 @@ function cmsMinimum(cms,version){
     return ['—','—'];
 }
 renderPackages=function(){
-    const selected=archiveUploading?'upload':archiveCMS;
-    viewTabs(archiveTabs,[['wordpress','WordPress'],['joomla','Joomla'],['upload','CMS-Paket installieren']],selected,key=>{
+    viewTabs(archiveTabs,[['versions','CMS-Versionen'],['upload','CMS-Paket installieren']],archiveUploading?'upload':'versions',key=>{
         archiveUploading=key==='upload';
-        if(!archiveUploading)archiveCMS=key;
         renderPackages();
     });
     archiveCatalog.value=archiveCMS;
-    archiveUploadForm.hidden=!archiveUploading;archiveList.hidden=archiveSync.hidden=archiveUploading;
+    archiveControls.hidden=archiveList.hidden=archiveUploading;
+    archiveUploadForm.hidden=!archiveUploading;
+    archiveSync.hidden=view!=='versions'||archiveUploading;
     if(archiveUploading)return;
     const known=new Map(releases.filter(r=>r.cms===archiveCMS).map(r=>[r.version,r]));
     for(const pkg of packages.filter(p=>p.cms===archiveCMS))known.set(pkg.version,pkg);
@@ -97,7 +106,15 @@ renderPackages=function(){
 };
 const extensionsWorkspace=$('#extensions-workspace');
 const extensionSwitchboard=$('.library-switchboard');
-extensionsWorkspace.before($('.library-tabs'),$('#extension-search').parentElement,extensionSwitchboard.querySelector('[data-tab-group]'));
+const extensionCmsSwitch=cmsSwitch(extensionCMS,cms=>{location.hash='#extensions/'+cms;});
+extensionsWorkspace.before($('.library-tabs'),$('#extension-search').parentElement,extensionCmsSwitch);
+const activateWorkspaceTab=activateTab;
+activateTab=function(group,key){
+    if(group!=='extensions')return activateWorkspaceTab(group,key);
+    extensionCMS=key==='joomla'?'joomla':'wordpress';
+    libraryItems=[];libraryItemsProject='';
+    extensionCmsSwitch.querySelector('input').checked=extensionCMS==='joomla';
+};
 extensionSwitchboard.remove();
 $('.library-heading').hidden=true;
 $('#library-archives > p')?.remove();
@@ -158,3 +175,26 @@ renderTasks=function(){const box=$('#tasks-view');if(!$('#recurring-task-list'))
 async function renderSchedules(){recurringTasks=(await api('schedules')).tasks;if(view!=='tasks')return;renderTasks();const list=$('#recurring-task-list');if(unchanged(list,recurringTasks))return;list.replaceChildren();if(!recurringTasks.length){empty(list,'Noch keine wiederkehrenden Aufgaben.');return;}list.append(workspaceTable(['Aufgabe','Zeitplan','Projekte','Nächster Lauf','Aktionen'],recurringTasks.map(task=>{const actions=el('div',undefined,'extra-actions');actions.append(localButton('Bearbeiten',()=>scheduleEditor(task)),button(task.enabled?'Pausieren':'Aktivieren',async()=>{await api('schedules',{...task,enabled:!task.enabled});await renderSchedules();}),button('Jetzt ausführen',()=>api('schedules/'+task.id+'/run',{})),localButton('Löschen',()=>removeSchedule(task),'danger'));if(task.running)actions.querySelectorAll('button').forEach(b=>b.disabled=true);return [task.name+(task.running?' · läuft':''),(task.frequency==='daily'?'Täglich':(['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag'][task.weekday]))+' '+task.time+' · '+task.timezone,task.projects.length?task.projects.join(', '):'Alle Projekte',task.enabled?managerDate(task.next_run,true,task.timezone):'Pausiert',actions];})));}
 jobKinds['scheduled-task']='Wiederkehrende Aufgabe';jobKinds['scheduled-check']='Projekt prüfen';
 const refreshBeforeManagerViews=refresh;refresh=async function(force=false){await refreshBeforeManagerViews(force);if(view==='files')await renderFiles();if(view==='tasks')await renderSchedules();};
+
+const syncHeadingRoute=route;
+route=async function(){
+    const section=location.hash.replace(/^#\/?/,'').split('/')[0];
+    archiveSync.hidden=section!=='versions'||archiveUploading;
+    await syncHeadingRoute();
+};
+
+function addDialogClose(dialog){
+    if(dialog.matches('.startup-splash')||dialog.querySelector(':scope > .dialog-close'))return;
+    const close=localButton('Schließen',()=>dialog.close(),'dialog-close');
+    close.autofocus=false;
+    dialog.append(close);
+    decorateAction(close);
+}
+document.querySelectorAll('dialog').forEach(addDialogClose);
+new MutationObserver(records=>{
+    for(const record of records){
+        for(const node of record.addedNodes){
+            if(node instanceof HTMLDialogElement)addDialogClose(node);
+        }
+    }
+}).observe(document.body,{childList:true});

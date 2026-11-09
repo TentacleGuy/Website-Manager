@@ -46,7 +46,7 @@ function workspaceTable(headers,rows,settings={}){
             if(control.tagName==='A'&&actionIcons.has(control.textContent.trim()))control.classList.add('button-link');
             decorateAction(control);
             const icon=control.dataset.iconName||[...control.querySelector('.ui-icon')?.classList||[]].find(name=>name.startsWith('icon-'))?.slice(5);
-            const label=control.dataset.iconLabel||control.getAttribute('aria-label')||control.title;
+            const label=icon==='trash'?'Löschen':control.dataset.iconLabel||control.getAttribute('aria-label')||control.title;
             if(icon&&label)actions.set(icon+'|'+label,[icon,label]);
         }
     }));

@@ -1,7 +1,15 @@
 /* One search across all visible columns; the trash preserves each asset's library metadata. */
 jobKinds['recycle-restore']='Aus Papierkorb wiederherstellen';jobKinds['recycle-purge']='Papierkorb bereinigen';
 actionIcons.set('Wiederherstellen','arrow-counterclockwise');actionIcons.set('Endgültig löschen','trash');actionIcons.set('In Papierkorb verschieben','trash');actionIcons.set('Dateien aktualisieren','arrow-clockwise');
-fileFilter.remove();fileToolbar.replaceChildren(fileSearch,button('Dateien aktualisieren',()=>renderFiles(true)));
+fileFilter.remove();fileToolbar.replaceChildren(fileSearch);
+const filesReload=button('Dateien aktualisieren',()=>renderFiles(true));
+filesReload.hidden=true;
+$('#title').parentElement.append(filesReload);
+const routeBeforeFilesReload=route;
+route=async function(){
+    filesReload.hidden=location.hash.replace(/^#\/?/,'').split('/')[0]!=='files';
+    await routeBeforeFilesReload();
+};
 fileSearch.placeholder='Alle Spalten durchsuchen …';fileSearch.setAttribute('aria-label','Alle Dateispalten durchsuchen');
 let recycleItems=[],fileArea='files';
 const fileTabs=el('div',undefined,'subtabs');fileTabs.setAttribute('role','tablist');fileTabs.setAttribute('aria-label','Dateibereiche');

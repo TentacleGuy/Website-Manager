@@ -1,16 +1,16 @@
 .theme-control,.workspace-layout .theme-control{
-  justify-content:flex-start;gap:0;margin:20px 0 0;padding:0;border:0;
+  justify-content:flex-start;gap:0;margin:0 0 22px;padding:0;border:0;
 }
 .aside-bottom,.workspace-layout .aside-bottom{padding:0;width:100%}
 #theme-toggle{
-  display:grid;place-items:center;flex:0 0 auto;width:44px;height:44px;min-height:44px;
+  display:grid;place-items:center;flex:0 0 auto;width:54px;height:54px;min-height:54px;
   padding:4px;margin:0;border:1px solid transparent;border-radius:50%;
   color:var(--accent-text);background:transparent;box-shadow:none;transform:none;
   touch-action:manipulation;transition:background-color .18s,border-color .18s;
 }
 #theme-toggle:hover{color:var(--accent-text);background:var(--accent-soft);border-color:transparent}
 #theme-toggle:active{background:var(--hover)}
-#theme-toggle .theme-symbol{display:block;width:32px;height:34px;overflow:visible;pointer-events:none}
+#theme-toggle .theme-symbol{display:block;width:44px;height:46px;overflow:visible;pointer-events:none}
 #theme-toggle .octo-body{fill:#8028e6}
 #theme-toggle .octo-hat,#theme-toggle .octo-glasses{transform-box:fill-box;transform-origin:center;transition:transform .45s cubic-bezier(.4,0,.2,1),opacity .45s}
 :root[data-theme="light"] #theme-toggle .octo-hat{transform:translate(-35px,13px) rotate(-40deg) scale(.7);opacity:0}
@@ -22,4 +22,4 @@
 @keyframes octo-left-reach{45%{transform:rotate(30deg)}}
 @keyframes octo-right-reach{55%{transform:rotate(-30deg)}}
 @media(prefers-reduced-motion:reduce){#theme-toggle *,#theme-toggle.swapping *{transition:none!important;animation:none!important}}
-@media(max-width:700px){.theme-control,.workspace-layout .theme-control{justify-content:flex-start;margin:16px 0 0;padding:0}}
+@media(max-width:700px){.theme-control,.workspace-layout .theme-control{justify-content:flex-start;margin:0 0 22px;padding:0}}
