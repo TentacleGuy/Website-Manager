@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import sys
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 import zipfile
@@ -31,6 +32,7 @@ class ApiTests(unittest.TestCase):
         if origin:h.headers['Origin']=origin
         if filename:h.headers['X-VMM-Filename']=filename
         response=[];h.send=lambda *args:response.append(args)
+        h.send_text=lambda *args:response.append(args)
         h.wfile=io.BytesIO();h.send_response=lambda code:response.append((code,{}))
         h.send_header=lambda *args:None;h.end_headers=lambda:None
         h.do_GET() if get else h.do_POST()
@@ -56,6 +58,48 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(self.request('/api/projects',host='attacker.example:8090')[0],403)
         self.assertEqual(self.request('/api/projects',origin='https://attacker.example')[0],403)
         self.assertEqual(self.request('/api/projects',host='192.168.1.20:8090',get=True)[0],200)
+
+    def test_safari_alarm_start_handoff_is_local_and_single_use(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(server.safari_alarm, 'DATA', Path(directory)):
+            (Path(directory) / 'desktop-integration.json').write_text(
+                '{"platform":"macos","scheme":"tentacle-project","version":1}')
+            launch = '/api/safari-alarm/launch'
+            self.assertEqual(self.request(launch, host='192.168.1.20:8090')[0], 400)
+            self.assertEqual(self.request(launch, origin='https://example.com')[0], 403)
+            self.assertEqual(self.request(launch, {'action': 'unknown'})[0], 400)
+            code, value = self.request(launch, origin='http://localhost:8090')
+            self.assertEqual(code, 201)
+            self.assertRegex(value['url'], r'^tentacle-project://safari-alarm/[a-f0-9]{32}$')
+            token = value['url'].rsplit('/', 1)[-1]
+            claim = f'/api/safari-alarm/{token}/claim'
+            host = '127.0.0.1:8090'
+            self.assertEqual(self.request(claim, host=host, origin='http://' + host)[0], 403)
+            self.assertEqual(self.request(claim, host=host, custom=False)[0], 403)
+            self.assertEqual(self.request(claim, host=host, raw=b''), (200, 'start'))
+            self.assertEqual(self.request(claim, host=host, raw=b'')[0], 400)
+            for action in ('restart', 'stop'):
+                code, value = self.request(launch, {'action': action})
+                self.assertEqual(code, 201)
+                token = value['url'].rsplit('/', 1)[-1]
+                claim = f'/api/safari-alarm/{token}/claim'
+                self.assertEqual(self.request(claim, host=host, raw=b''), (200, action))
+
+    def test_safari_alarm_status_requires_a_current_macos_heartbeat(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(server.safari_alarm, 'DATA', Path(directory)):
+            route = '/api/safari-alarm'
+            integration = Path(directory) / 'desktop-integration.json'
+            self.assertEqual(self.request(route, get=True)[1], {'available': False, 'running': False})
+            integration.write_text('{"platform":"windows","scheme":"tentacle-project","version":1}')
+            self.assertEqual(self.request(route, get=True)[1], {'available': False, 'running': False})
+            integration.write_text('{"platform":"macos","scheme":"tentacle-project","version":1}')
+            self.assertEqual(self.request(route, get=True)[1], {'available': True, 'running': False})
+            heartbeat = Path(directory) / 'safari-alarm.json'
+            heartbeat.write_text(json.dumps({'pid': 1234, 'time': int(time.time()) - 30}))
+            self.assertEqual(self.request(route, get=True)[1], {'available': True, 'running': False})
+            heartbeat.write_text(json.dumps({'pid': 1234, 'time': int(time.time())}))
+            self.assertEqual(self.request(route, get=True)[1], {'available': True, 'running': True, 'pid': 1234})
+            self.assertEqual(self.request(route, host='192.168.1.20:8090', get=True)[1],
+                             {'available': False, 'running': False})
 
     def test_project_credentials_visible_scoped_and_editable(self):
         for name in ('vault-one','vault-two'):

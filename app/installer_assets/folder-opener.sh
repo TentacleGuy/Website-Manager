@@ -1,7 +1,24 @@
 #!/bin/bash
-# Only project slugs are accepted; host paths come from the local manager.
+# Host paths come from the local manager, and helper actions require a one-time token.
 set -euo pipefail
 url=${1:-}
+if [[ "$url" =~ ^tentacle-project://safari-alarm/([a-f0-9]{32})/?$ ]]; then
+    token=${BASH_REMATCH[1]}
+    [[ "$(uname -s)" == Darwin ]] || exit 1
+    if response=$(curl --disable --noproxy '*' --proto '=http' --fail --silent --max-time 10 \
+        -H 'X-VMM-Request: 1' --data '' --write-out $'\n%{http_code}' \
+        "http://127.0.0.1:8090/api/safari-alarm/$token/claim") && [[ "${response##*$'\n'}" == 200 ]]; then
+        action=${response%$'\n'*}
+        if [[ "$action" == '{"ok": true}' ]]; then action=start; fi
+        case "$action" in
+          start|restart|stop)
+            helper_dir=$(cd "$(dirname "$0")" && pwd -P)
+            /bin/bash "$helper_dir/macos/helpers/start-safari-alarm.sh" "$action" 2>/dev/null || true
+            ;;
+        esac
+    fi
+    exit 0
+fi
 if [[ "$url" =~ ^tentacle-project://(choose|repair)/([a-f0-9]{32})/?$ ]]; then
     mode=${BASH_REMATCH[1]};token=${BASH_REMATCH[2]}
     if [[ "$mode" = repair ]]; then

@@ -21,6 +21,7 @@ from operations import transition, snapshot, restore_akeeba, finalize_restore, i
 import extension_service as extensions
 import project_service as projects_service
 import desktop_service
+import safari_alarm
 
 from credentials import listing as credential_list, change as credential_change
 
@@ -70,6 +71,16 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header('Content-Type','application/json; charset=utf-8');self.send_header('Cache-Control','no-store')
         self.send_header('X-Content-Type-Options','nosniff');self.send_header('Content-Length',str(len(body)))
         self.end_headers();self.wfile.write(body)
+
+    def send_text(self, code, value):
+        body = value.encode('utf-8')
+        self.send_response(code)
+        self.send_header('Content-Type', 'text/plain; charset=utf-8')
+        self.send_header('Cache-Control', 'no-store')
+        self.send_header('X-Content-Type-Options', 'nosniff')
+        self.send_header('Content-Length', str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
     def trusted_host(self):
         # Prevent DNS rebinding into the intentionally unauthenticated local API.
@@ -148,6 +159,8 @@ class Handler(BaseHTTPRequestHandler):
         if not self.trusted_host(): return self.send(403,{'error':'Host nicht freigegeben.'})
         path=urlparse(self.path).path
         try:
+            if path == '/api/safari-alarm':
+                return self.send(200, safari_alarm.status(self.headers.get('Host')))
             project_folder=re.fullmatch(r'/api/projects/([a-z][a-z0-9-]{0,39})/folder',path)
             if project_folder:
                 value=desktop_service.folder(project_folder[1])
@@ -383,6 +396,13 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200,__import__('folder_picker').complete(picker_callback[1],self.rfile.read(length).decode('utf-8')))
             body=json.loads(self.rfile.read(length) or '{}')
             if not isinstance(body,dict): raise ValueError('JSON-Objekt erwartet.')
+            if path == '/api/safari-alarm/launch':
+                return self.send(201, safari_alarm.create(self.headers.get('Host'), body.get('action', 'start')))
+            alarm_claim = re.fullmatch(r'/api/safari-alarm/([a-f0-9]{32})/claim', path)
+            if alarm_claim:
+                if origin or self.headers.get('Host') != '127.0.0.1:8090':
+                    return self.send(403, {'error': 'Diese Aktion ist der lokalen macOS-Anbindung vorbehalten.'})
+                return self.send_text(200, safari_alarm.claim(alarm_claim[1]))
             if path=='/api/deletion-settings':return self.send(200,__import__('recycle_service').save_settings(body))
             recycle=re.fullmatch(r'/api/recycle/([a-f0-9]{24})/(restore|purge)',path)
             if recycle:

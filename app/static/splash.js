@@ -62,5 +62,5 @@
  document.addEventListener('keydown',e=>{if(dialog.open&&e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();dialog.close();}},true);
  close.onclick=()=>dialog.close();
  dialog.addEventListener('close',()=>{video.pause();preview.disabled=false;});
- if(enabled)show();
+ if(enabled)safariAlarmStartup.catch(()=>{}).then(()=>{if(enabled)show();});
 })();

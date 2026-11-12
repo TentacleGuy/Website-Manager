@@ -6,6 +6,16 @@ Alle wesentlichen Änderungen am Website Manager werden hier dokumentiert. Neue 
 
 Noch keine Änderungen.
 
+## [2.0.8] - 2026-11-12
+
+### Neu
+
+- Technischer Helfer für macOS.
+
+### Behoben
+
+- Bugfixes.
+
 ## [2.0.7] - 2026-11-09
 
 ### Verbessert

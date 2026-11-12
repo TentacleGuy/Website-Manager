@@ -21,3 +21,4 @@ infra/dynamic/warmup.yaml
 infra/dynamic/protocols.yaml
 
 /app/release-notes.json
+/Helfer.app/

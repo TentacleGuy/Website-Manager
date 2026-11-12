@@ -35,6 +35,10 @@ def main():
         with zipfile.ZipFile(artifact) as package:
             for asset in ('app/static/workspace.js','app/static/splash.js','app/static/splash.css','app/static/assets/tentacle-web.mp4'):
                 assert asset in package.namelist(),asset
+            for asset in ('helpers/start-safari-alarm.sh', 'helpers/build-helfer.sh', 'helpers/helfer-entrypoint.sh',
+                          'helpers/Helfer-Info.plist', 'safari-alarm.js', 'safari-alarm.wav'):
+                assert 'app/installer_assets/macos/' + asset in package.namelist(), asset
+            assert 'app/safari_alarm.py' in package.namelist()
             assert not any(n.startswith(('data/','.env')) for n in package.namelist())
             package.extractall(destination)
         # Updating program files must preserve an existing installation's private data.
