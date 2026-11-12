@@ -12,7 +12,7 @@ Der Import übernimmt eine vorhandene Joomla- oder WordPress-Website samt Datenb
 6. Bei einem verschlüsselten JPS-Archiv das Passwort eingeben. Es wird nicht in Projektmetadaten oder im Job gespeichert.
 7. Kickstart automatisch wählen oder eine passende Version vorgeben und das Projekt anlegen.
 
-Der Manager lädt Kickstart bei Bedarf von Akeeba. Unter **System → Akeeba Kickstart** lassen sich Versionen abrufen; eine eigene offizielle `kickstart.php` ist ebenfalls möglich.
+Der Manager lädt Kickstart bei Bedarf von Akeeba. Im Reiter **System** der Systemansicht lassen sich unter **Akeeba Kickstart** Versionen abrufen. Eine eigene offizielle `kickstart.php` ist ebenfalls möglich.
 
 ## Was beim Import passiert
 

@@ -14,7 +14,7 @@ Unter dem Video ist **Beim nächsten Start abspielen** standardmäßig angehakt.
 
 ## Systemeinstellung
 
-Unter **System → Startvideo** lässt sich **Startvideo beim Öffnen des Projektmanagers abspielen** ein- oder ausschalten. Die Einstellung und die Checkbox im Modal gelten für dieselbe Auswahl.
+Im Reiter **System** der Systemansicht im Abschnitt **Startvideo** lässt sich **Startvideo beim Öffnen des Projektmanagers abspielen** ein- oder ausschalten. Die Einstellung und die Checkbox im Modal gelten für dieselbe Auswahl.
 
 **Startvideo ansehen** öffnet das Video jederzeit als Vorschau, auch wenn die automatische Wiedergabe beim Start ausgeschaltet ist. Eine Vorschau schaltet die automatische Wiedergabe nicht von selbst wieder ein.
 

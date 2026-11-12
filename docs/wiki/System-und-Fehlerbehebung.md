@@ -1,6 +1,6 @@
 # System und Fehlerbehebung
 
-Unter **System → Dienste & Rechte** den Zustand der Managerdienste und ihre Zugriffsrechte prüfen. Dieser Reiter hieß in älteren Beschreibungen **Infrastruktur**.
+Unter **System → Dienste** stehen der Zustand der Dienste, die Prüfungen unter **Rechte** und die Desktop-Anbindung unter **Freigaben**.
 
 ## Dienste prüfen
 
@@ -9,6 +9,12 @@ Unter **System → Dienste & Rechte** den Zustand der Managerdienste und ihre Zu
 Eigene Dienste können je Zustand gestartet, neu gestartet oder beendet werden. Laufende Arbeiten schützen benötigte Dienste vor dem Beenden. Mehrere Projekte können dieselbe PHP-Laufzeit nutzen; ein Neustart betrifft dann mehrere Websites. PHP kann beim nächsten Website-Aufruf wieder bei Bedarf starten.
 
 Nach dem Beenden des Managers die lokale **Starten**-Datei verwenden. Ein beendeter Manager kann Docker Desktop oder Docker Engine nicht selbst wieder starten. Fehlende Gateway-/DNS-Container werden durch die lokale Startdatei eingerichtet.
+
+## Tentacle Helfer unter macOS
+
+Im lokalen macOS-Manager lässt sich der technische **Tentacle Helfer** über **Helfer starten** aktivieren. Den Startdialog kannst du über das Schließen-Symbol verlassen.
+
+Unter **System → Dienste** zeigt die Zeile **Tentacle Helfer** den Status und die Aktionen **Starten**, **Neu starten** und **Beenden**. Wenn der Browser nachfragt, bestätige das Öffnen der lokalen Desktop-Anbindung.
 
 ## Docker-Namen und Konfiguration
 
@@ -32,7 +38,7 @@ Konfigurationsvariablen heißen `TENTACLE_*`, zum Beispiel `TENTACLE_BIND`, `TEN
 
 ## Ordneranbindung
 
-**Ordnerfreigabe anfragen** testet den nativen Dialog, ohne Speicherorte zu ändern. **Ordneranbindung erneut einrichten** erneuert eine vorhandene Registrierung. Fehlt diese vollständig, zuerst die lokale Startdatei ausführen.
+Unter **System → Dienste → Freigaben** testet **Ordnerfreigabe anfragen** den nativen Dialog, ohne Speicherorte zu ändern. **Ordneranbindung erneut einrichten** erneuert eine vorhandene Registrierung. Fehlt diese vollständig, zuerst die lokale Startdatei ausführen.
 
 macOS verwendet den Systemdialog, Windows den FolderBrowserDialog und Linux `zenity` oder `kdialog`. Eine dauerhaft abgelehnte Browser- oder Betriebssystemfreigabe muss dort wieder erlaubt werden. Die Website kann sie nicht erzwingen.
 
@@ -47,4 +53,4 @@ Protokolle vor einer öffentlichen Weitergabe auf Zugangsdaten und persönliche 
 
 ## Startvideo einstellen
 
-Unter **System → Startvideo** die Wiedergabe beim Öffnen des Managers ein- oder ausschalten. **Startvideo ansehen** öffnet eine Vorschau. Die Auswahl gilt für den jeweiligen Browser. Weitere Hinweise unter [Startvideo](Startvideo.md).
+Im Reiter **System** der Systemansicht steht im Abschnitt **Startvideo** der Schalter für die Wiedergabe beim Öffnen des Managers. **Startvideo ansehen** öffnet eine Vorschau. Die Auswahl gilt für den jeweiligen Browser. Weitere Hinweise unter [Startvideo](Startvideo.md).

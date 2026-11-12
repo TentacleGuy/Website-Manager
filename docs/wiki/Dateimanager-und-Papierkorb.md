@@ -7,13 +7,11 @@ Der **Dateimanager** bündelt CMS- und Erweiterungspakete, Akeeba-Archive, Proje
 1. **Dateimanager → Alle Dateien** öffnen.
 2. Die gemeinsame Suche verwenden; sie berücksichtigt die angezeigten Spalten.
 3. Über Spaltenüberschriften sortieren.
-4. **Dateien anzeigen** für Dateidetails und einzelne Downloads wählen.
-
-Ein zusätzlicher Typ-Dropdown oder einzelne Spaltenfilter sind im Dateimanager von Version 2.0.5 nicht vorhanden. Die Projektübersicht hat dagegen eigene Spaltenfilter.
+4. Die verfügbare Löschaktion steht in der jeweiligen Zeile. Backups und Projektsicherungen lassen sich in der [Backup-Ansicht](Backups-und-Wiederherstellung.md) herunterladen.
 
 ## Löschverhalten einstellen
 
-Unter **System → Löschen & Papierkorb** zwischen Papierkorb und direkter endgültiger Löschung wählen. Die Standardwerte sind **Papierkorb** und **30 Tage** Aufbewahrung. Zulässig sind 1 bis 3650 Tage.
+Unter **System → Speicher** im Abschnitt **Dateien löschen** zwischen Papierkorb und direkter endgültiger Löschung wählen. Die Standardwerte sind **Papierkorb** und **30 Tage** Aufbewahrung. Zulässig sind 1 bis 3650 Tage.
 
 Die Frist gilt für künftige Löschungen. Bereits gespeicherte Ablaufdaten werden durch eine Änderung nicht angepasst. Abgelaufene Einträge werden bei laufendem Manager automatisch endgültig entfernt und protokolliert.
 

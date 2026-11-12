@@ -1,6 +1,6 @@
 # Installation unter Windows
 
-Verwende das Windows-Setup aus den [Releases](https://github.com/TentacleGuy/Website-Manager/releases). Die folgenden Schritte beschreiben den Installer der Version 2.0.5.
+Verwende das Windows-Setup aus den [Releases](https://github.com/TentacleGuy/Website-Manager/releases). Die folgenden Schritte beschreiben den Installer der Version 2.0.8.
 
 ## Einrichten
 

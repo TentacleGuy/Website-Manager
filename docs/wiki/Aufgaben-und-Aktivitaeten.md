@@ -22,7 +22,7 @@ Die laufenden Aufgaben zeigen Startzeit, Meldung und gegebenenfalls Fortschritt.
 
 ## Activity Log
 
-Standardmäßig werden die letzten sieben Tage in Seiten mit jeweils 50 Einträgen angezeigt. Zeitraum, Suche und Status helfen beim Eingrenzen. Zeitangaben verwenden die Browserzeitzone.
+Standardmäßig werden die letzten sieben Tage in Seiten mit jeweils 20 Einträgen angezeigt. Zeitraum, Suche und Status helfen beim Eingrenzen. Zeitangaben verwenden die Browserzeitzone. **Meldung anzeigen** öffnet Details zum jeweiligen Vorgang.
 
 **Alte Logs löschen** entfernt nur abgeschlossene, fehlgeschlagene oder unterbrochene Vorgänge mit einem Beginn vor dem angegebenen Zeitpunkt. Laufende und wartende Vorgänge bleiben erhalten.
 

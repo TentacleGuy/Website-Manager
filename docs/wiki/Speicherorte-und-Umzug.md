@@ -1,16 +1,16 @@
 # Speicherorte und Umzug
 
-Unter **System → Speicherorte** lassen sich die Bereiche für Projekte, Erweiterungen, CMS-Pakete, Akeeba-Backups und Projektsicherungen verwalten. Die Pfade beziehen sich auf den Docker-Rechner.
+Unter **System → Speicher** lassen sich die Bereiche für Projekte, Erweiterungen, CMS-Pakete, Akeeba-Backups und Projektsicherungen verwalten. Die Pfade beziehen sich auf den Docker-Rechner.
 
 ## Speicherbereich umstellen
 
 1. Laufende Jobs und Uploads abschließen lassen.
 2. Den gewünschten absoluten Zielpfad auswählen oder **Pfad manuell eingeben** verwenden.
 3. **Speicherorte prüfen** wählen.
-4. Erst nach erfolgreicher Prüfung **Daten kopieren und Speicherorte übernehmen** ausführen.
+4. Erst nach erfolgreicher Prüfung **Speicherpfade aktivieren** ausführen.
 5. Den Neustart abwarten und die neuen Speicherorte prüfen.
 
-Die Ordnerauswahl ändert zunächst nur das Formular. Zielordner müssen leer, beschreibbar und ausreichend groß sein. Dateien werden kopiert und mit SHA-256 verglichen, bevor neue Einbindungen aktiviert werden. Betroffene PHP-Laufzeiten werden kurz angehalten. Alte Ordner werden nicht automatisch gelöscht. Bei einem Fehlschlag werden Einstellungen zurückgesetzt; angelegte Zielkopien können zur Prüfung liegen bleiben.
+Die Ordnerauswahl ändert zunächst nur das Formular. Der ausgewählte Ordner muss vorhanden und beschreibbar sein. Der Manager bindet ihn beim Aktivieren ein. Bestehende Dateien bleiben an ihrem bisherigen Speicherort. Falls du sie am neuen Speicherort brauchst, übertrage sie vor dem Aktivieren. Betroffene PHP-Laufzeiten werden während der Umstellung kurz angehalten.
 
 Der native Dialog ist auf dem Installationsrechner über localhost verfügbar. Bei einem entfernten Browser Pfade manuell eingeben. Externe Laufwerke müssen bei späteren Starts verfügbar sein.
 

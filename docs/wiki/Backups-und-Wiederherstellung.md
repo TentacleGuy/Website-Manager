@@ -14,7 +14,7 @@ Die Herkunft wird anhand der gespeicherten Backup-Metadaten unterschieden. Ein Z
 
 Unter **Projekt → Backups → Projektsicherung erstellen** einen Export starten. Die Sicherung enthält Website-Dateien, `database.sql` und `project.json`. Vor Erweiterungsinstallationen und Updates werden ebenfalls Projektsicherungen angelegt. Ergebnisse erscheinen unter **Backups** und im **Dateimanager**.
 
-Dateien lassen sich über **Dateimanager → Dateien anzeigen → Herunterladen** sichern. Kopien außerhalb des Installationsrechners aufbewahren, wenn sie vor dessen Ausfall schützen sollen.
+Projektsicherungen lassen sich unter **Backups → Lokale Projektsicherungen** über **Herunterladen** sichern. Kopien außerhalb des Installationsrechners aufbewahren, wenn sie vor dessen Ausfall schützen sollen.
 
 ## Projektsicherung als neues Projekt einspielen
 

@@ -5,7 +5,7 @@ Ein Projekt verbindet Website-Dateien, CMS, PHP-Laufzeit und eine eigene Projekt
 ## Neue Website erstellen
 
 1. **CMS-Archiv** öffnen und WordPress oder Joomla auswählen.
-2. Versionen abrufen und ein Paket herunterladen oder ein CMS-ZIP hochladen. Beim Upload werden CMS und Version erkannt.
+2. Unter **CMS-Versionen** ein Paket herunterladen oder unter **CMS-Paket installieren** ein CMS-ZIP hochladen.
 3. Unter **Projekte** ein neues Projekt anlegen.
 4. Einen Namen vergeben: kleiner Buchstabe am Anfang, danach kleine Buchstaben, Ziffern und Bindestriche; maximal 40 Zeichen.
 5. Das archivierte CMS-Paket wählen. PHP und Datenbank automatisch oder ausdrücklich auswählen.
@@ -16,7 +16,7 @@ Die automatische CMS-Einrichtung unterstützt WordPress und Joomla ab 4.3. Für 
 
 ## Website öffnen
 
-Die Projektübersicht ist eine Tabelle mit Suche, Spaltenfiltern und Sortierung. **Frontend**, **Backend**, **Projektdetails**, Akeeba-Aktionen und der Projektordner sind über die Zeilenaktionen erreichbar. Symbole zeigen ihre Beschriftung beim Darüberfahren.
+Die Projektübersicht ist eine Tabelle mit gemeinsamer Suche und sortierbaren Spalten. **Frontend**, **Backend**, **Projektdetails**, Akeeba-Aktionen und der Projektordner sind über die Zeilenaktionen erreichbar. Symbole zeigen ihre Beschriftung beim Darüberfahren.
 
 Die Detailansicht enthält **Übersicht**, **Erweiterungen**, **Backups**, **Benutzer**, **Lizenzen**, **Datenbank** und **Einstellungen**. Unter **Datenbank** stehen Projektzugänge und der Link zu phpMyAdmin.
 
@@ -28,4 +28,4 @@ In der Projektliste das **Papierkorb-Icon** in der Zeile des Projekts wählen. A
 
 Die Projektlöschung legt Dateien, Metadaten und gegebenenfalls SQL unter `data/trash/` ab; die Projektdatenbank bleibt zunächst erhalten. Das ist ein eigener Ablauf gegenüber der einstellbaren direkten Löschung gespeicherter Pakete.
 
-In Version 2.0.5 lässt sich das Projekt unter **Dateimanager → Papierkorb → Wiederherstellen** zurückholen. Es erscheint gestoppt unter seinem ursprünglichen Namen. Ein belegter Name oder problematische Dateiverknüpfungen verhindern die automatische Wiederherstellung. Verfügbare Datenbanken werden wiederverwendet; andernfalls wird der gesicherte SQL-Export eingespielt. Die angezeigte Aufbewahrungsfrist beachten.
+Unter **Dateimanager → Papierkorb** lässt sich das Projekt über **Wiederherstellen** zurückholen. Es erscheint gestoppt unter seinem ursprünglichen Namen. Ein belegter Name oder problematische Dateiverknüpfungen verhindern die automatische Wiederherstellung. Verfügbare Datenbanken werden wiederverwendet; andernfalls wird der gesicherte SQL-Export eingespielt. Die angezeigte Aufbewahrungsfrist beachten.
